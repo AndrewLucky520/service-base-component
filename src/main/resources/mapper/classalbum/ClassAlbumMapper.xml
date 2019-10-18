@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.classalbum.dao.ClassAlbumMapper">
+	
+	<!-- 添加班级相册 -->
+	<insert id="createAlbum" keyProperty="id" parameterType="JSONObject">
+		<selectKey resultType="java.lang.Long" order="AFTER" keyProperty="id">
+          SELECT LAST_INSERT_ID()
+      	</selectKey>
+		 insert into ${db_classalbum}.t_album(
+		 	name,
+		 	classId,
+		 	schoolId,
+		 	termInfoId,
+		 	creator,
+		 	role,
+		 	extStudentUserId,
+		 	creatorName,
+		 	createTime,
+		 	type
+		 )values(
+		 	#{name},
+		 	#{classId},
+		 	#{schoolId},
+		 	#{termInfoId},
+		 	#{creator},
+		 	#{role},
+		 	#{extStudentUserId},
+		 	#{creatorName},
+		 	#{createTime},
+		 	#{type}
+		 )
+	</insert>
+	
+	<!-- 检查相册创建人是否为自己 -->
+	<select id="checkAlbumCreator" parameterType="JSONObject" resultType="Integer">
+		SELECT COUNT(*) FROM ${db_classalbum}.t_album WHERE id = #{albumId} AND creator = #{creator}
+	</select>
+	
+	<!-- 修改相册名称 -->
+	<update id="editAlbumName" parameterType="JSONObject">
+		UPDATE ${db_classalbum}.t_album SET name = #{name} WHERE id = #{albumId}
+	</update>
+	
+	<!-- 查询特定名称的相册是否存在 -->
+	<select id="checkAlbumExistByName" parameterType="JSONObject" resultType="Integer">
+		SELECT COUNT(*) isExist FROM ${db_classalbum}.t_album
+		WHERE name = #{name} AND classId = #{classId} AND schoolId = #{schoolId}
+	</select>
+	
+	<!-- 添加相册图片 -->
+	<insert id="addImage" parameterType="JSONObject">
+		 insert into ${db_classalbum}.t_image(
+		 	albumId,
+		 	name,
+		 	creator,
+		 	role,
+		 	extStudentUserId,
+		 	creatorName,
+		 	createTime,
+		 	extUserId,
+		 	fileId,
+		 	accessUrl,
+		 	thumFileId,
+		 	thumAccessUrl,
+		 	size,
+		 	classId,
+		 	schoolId
+		 	)values
+		 	<foreach collection="imageList" item="item" index="index" separator=",">
+            	(
+            	#{item.albumId},
+            	#{item.name},
+            	#{item.creator},
+            	#{item.role},
+            	#{item.extStudentUserId},
+            	#{item.creatorName},
+            	#{item.createTime},
+            	#{item.extUserId},
+            	#{item.fileId},
+            	#{item.accessUrl},
+            	#{item.thumFileId},
+            	#{item.thumAccessUrl},
+            	#{item.size},
+            	#{item.classId},
+            	#{item.schoolId}
+            	)
+        	</foreach>
+	</insert>
+	
+	<!-- 检查图片创建人是否为自己 -->
+	<select id="checkImageCreator" parameterType="JSONObject" resultType="Integer">
+		SELECT COUNT(*) FROM ${db_classalbum}.t_image WHERE id = #{imageId} AND creator = #{creator}
+	</select>
+	
+	<!-- 获取同意相册下的图片名称列表 -->
+	<select id="getImageNameMap" parameterType="JSONObject" resultType="map">
+		SELECT name FROM ${db_classalbum}.t_image WHERE albumId=#{albumId}
+	</select>
+	
+	<!-- 修改单个图片名称 -->
+	<update id="editImageName" parameterType="JSONObject">
+		UPDATE ${db_classalbum}.t_image SET name = #{name} WHERE id = #{imageId}
+	</update>
+	
+	<!-- 添加评论 -->
+	<insert id="addComment" keyProperty="id" parameterType="JSONObject">
+		<selectKey resultType="java.lang.Long" order="AFTER" keyProperty="id">
+          SELECT LAST_INSERT_ID()
+      	</selectKey>
+		 insert into ${db_classalbum}.t_comment(
+		 	albumId,
+		 	imageId,
+		 	content,
+		 	creator,
+		 	role,
+		 	extStudentUserId,
+		 	creatorName,
+		 	createTime,
+		 	classId,
+		 	schoolId
+		 )values(
+		 	#{albumId},
+		 	#{imageId},
+		 	#{content},
+		 	#{creator},
+		 	#{role},
+		 	#{extStudentUserId},
+		 	#{creatorName},
+		 	#{createTime},
+		 	#{classId},
+		 	#{schoolId}
+		 )
+	</insert>
+	
+	<!-- 获取评论列表 -->
+	<select id="getCommentList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT * FROM ${db_classalbum}.t_comment 
+		WHERE albumId = #{albumId} AND imageId = #{imageId}
+		order by createTime desc
+	</select>
+	
+	<!-- 检查是否为评论创建人 -->
+	<select id="checkCommentCreator" parameterType="JSONObject" resultType="Integer">
+		SELECT COUNT(*) FROM ${db_classalbum}.t_comment WHERE id = #{commentId} AND creator = #{creator}
+	</select>
+	
+	<!-- 删除评论 -->
+	<delete id="deleteComment" parameterType="JSONObject">
+		DELETE FROM ${db_classalbum}.t_comment WHERE id = #{commentId};
+	</delete>
+	
+	<!-- 点赞 -->
+	<insert id="addLike" parameterType="JSONObject">
+		INSERT INTO ${db_classalbum}.t_like(
+			albumId,
+			imageId,
+			creator,
+			role,
+		 	extStudentUserId,
+		 	creatorName,
+		 	createTime,
+			classId,
+			schoolId
+		)values(
+			#{albumId},
+			#{imageId},
+			#{creator},
+			#{role},
+		 	#{extStudentUserId},
+		 	#{creatorName},
+		 	#{createTime},
+		 	#{classId},
+		 	#{schoolId}
+		)
+	</insert>
+	
+	<!-- 取消点赞 -->
+	<delete id="deleteLike" parameterType="JSONObject">
+		DELETE FROM ${db_classalbum}.t_like 
+		WHERE creator = #{creator} AND 
+		      albumId = #{albumId} AND 
+		      imageId = #{imageId} AND 
+		      classId = #{classId} AND 
+		      schoolId = #{schoolId}
+	</delete>
+	
+	<!-- 获取点赞列表 -->
+	<select id="getLikeList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT creator,creatorName,date_format(createTime,'%Y年%m月%d日 %H:%i')
+		FROM ${db_classalbum}.t_like 
+		WHERE albumId = #{albumId} AND imageId = #{imageId}
+		order by createTime desc
+	</select>
+	
+	<resultMap type="JSONObject" id="AlbumDetail">
+		<result column="albumId" property="albumId"/>
+		<result column="name" property="name"/>
+		<result column="creator" property="creator"/>
+		<result column="creatorName" property="creatorName"/>
+		<result column="createTime" property="createTime"/>	
+	</resultMap>
+	
+	<resultMap type="JSONObject" id="AlbumSet">
+		<result column="albumId" property="albumId"/>
+		<result column="name" property="name"/>
+		<result column="creator" property="creator"/>
+		<result column="creatorName" property="creatorName"/>
+		<result column="createTime" property="createTime"/>
+		<result column="isCreator" property="isCreator"/>
+		<collection property="ImageList" javaType="java.util.List" resultMap="ImageSet"/>		
+	</resultMap>
+	
+	<resultMap type="JSONObject" id="ImageSet">
+		<result column="imageId" property="imageId"/>
+		<result column="imageName" property="name"/>
+		<result column="imageCreator" property="creator"/>
+		<result column="imageCreatorName" property="creatorName"/>
+		<result column="imageCreateTime" property="createTime"/>
+		<result column="extUserId" property="extUserId"/>
+		<result column="fileId" property="fileId"/>
+		<result column="accessUrl" property="accessUrl"/>
+		<result column="thumFileId" property="thumFileId"/>
+		<result column="thumAccessUrl" property="thumAccessUrl"/>
+		<collection property="Comment" javaType="java.util.List" resultMap="CommentSet"/>
+		<collection property="Like" javaType="java.util.List" resultMap="LikeSet"/>
+	</resultMap>
+	
+	<resultMap type="JSONObject" id="CommentSet">
+		<result column="commentId" property="commentId"/>
+		<result column="content" property="content"/>
+		<result column="commentCreator" property="creator"/>
+		<result column="commentCreatorName" property="creatorName"/>
+		<result column="commentCreateTime" property="createTime"/>
+	</resultMap>
+	
+	<resultMap type="JSONObject" id="LikeSet">
+		<result column="likeCreator" property="creator"/>
+		<result column="likeCreatorName" property="creatorName"/>
+		<result column="likeCreateTime" property="createTime"/>
+	</resultMap>
+	
+	<!-- 获取相册(列表) -->
+	<select id="getAlbum" parameterType="JSONObject" resultMap="AlbumSet">
+		SELECT 
+			a.id as albumId,a.name,a.creator,a.creatorName,date_format(a.createTime,'%Y年%m月%d日 %H:%i') createTime,a.classId,a.schoolId,
+			i.imageId,i.name as imageName,i.creator as imageCreator,i.creatorName as imageCreatorName,date_format(i.createTime,'%Y年%m月%d日 %H:%i') as imageCreateTime,i.extUserId,i.fileId,i.accessUrl,i.thumFileId,i.thumAccessUrl,
+			i.commentId,i.content,i.commentCreator,i.commentCreatorName,i.commentCreateTime,
+			i.likeCreator,i.likeCreatorName,i.likeCreateTime,
+			(IF(a.creator=#{creator},1,0)) as isCreator
+			FROM ${db_classalbum}.t_album a
+			
+			LEFT JOIN (
+				SELECT id as imageId,albumId,name,creator,creatorName,createTime,extUserId,fileId,accessUrl,thumFileId,thumAccessUrl,
+				commentId,content,commentCreator,commentCreatorName,commentCreateTime,
+				likeCreator,likeCreatorName,likeCreateTime
+				FROM ${db_classalbum}.t_image b
+				
+				LEFT JOIN (
+					SELECT id as commentId,imageId,content,creator as commentCreator,creatorName as commentCreatorName,date_format(createTime,'%Y年%m月%d日 %H:%i') as commentCreateTime
+					FROM ${db_classalbum}.t_comment
+					order by createTime desc
+				) c ON (b.id = c.imageId)
+				
+				LEFT JOIN (
+					SELECT albumId as likeAlbumId,imageId,creator as likeCreator,creatorName as likeCreatorName,date_format(createTime,'%Y年%m月%d日 %H:%i') as likeCreateTime
+					FROM ${db_classalbum}.t_like
+					order by createTime desc
+				) l ON (b.id = l.imageId AND b.albumId = l.likeAlbumId)
+				order by b.createTime desc ,commentCreateTime desc,likeCreateTime desc
+			) i ON (a.id = i.albumId) 
+			
+		WHERE a.classId = #{classId} AND a.schoolId = #{schoolId}
+		order by a.createTime desc,i.createTime desc,i.commentCreateTime desc,i.likeCreateTime desc
+	</select>
+	
+	<!-- 获取相册详情 -->
+	<select id="getAlbumDetail" parameterType="JSONObject" resultMap="AlbumDetail">
+		SELECT
+			id as albumId,name,creator,date_format(createTime,'%Y年%m月%d日 %H:%i') as createTime
+			FROM ${db_classalbum}.t_album
+		WHERE id = #{albumId}
+	</select>
+	<!-- 获取相册详情 图片分页列表 -->
+	<select id="getAlbumImagePage" parameterType="JSONObject" resultMap="ImageSet">
+		SELECT 
+			id as imageId,albumId,name as imageName,creator as imageCreator,creatorName as imageCreatorName,date_format(createTime,'%Y年%m月%d日 %H:%i') as imageCreateTime,extUserId,fileId,accessUrl,thumFileId,thumAccessUrl,
+			commentId,content,commentCreator,commentCreatorName,commentCreateTime,
+			likeCreator,likeCreatorName,likeCreateTime
+			FROM ${db_classalbum}.t_image b
+				
+			LEFT JOIN (
+				SELECT id as commentId,imageId,content,creator as commentCreator,creatorName as commentCreatorName,date_format(createTime,'%Y年%m月%d日 %H:%i') as commentCreateTime
+				FROM ${db_classalbum}.t_comment 
+				order by createTime desc
+			) c ON (b.id = c.imageId)
+			
+			LEFT JOIN (
+				SELECT imageId,creator as likeCreator,creatorName as likeCreatorName,date_format(createTime,'%Y年%m月%d日 %H:%i') as likeCreateTime
+				FROM ${db_classalbum}.t_like 
+				order by createTime desc
+			) l ON (b.id = l.imageId)
+			
+			WHERE albumId = #{albumId}
+			order by createTime desc,commentCreateTime desc,likeCreateTime desc LIMIT #{position}, #{pageSize}
+	</select>
+	
+	<!-- 获取相册首页 -->
+	<select id="getAlbumHome" parameterType="JSONObject" resultType="java.lang.String">
+		SELECT accessUrl FROM ${db_classalbum}.t_image
+		WHERE classId = #{classId} AND schoolId = #{schoolId}
+		order by createTime desc LIMIT ${limit}
+	</select>
+	
+	<!-- 删除相册图片 -->
+	<delete id="deleteAlbumImage" parameterType="JSONObject">
+		DELETE FROM ${db_classalbum}.t_image
+		WHERE id in
+		<foreach item="item" collection="imageIds" index="index" open="(" close=")" separator=",">
+            #{item}
+        </foreach>;
+        
+        DELETE FROM ${db_classalbum}.t_comment
+        WHERE imageId in
+        <foreach item="item" collection="imageIds" index="index" open="(" close=")" separator=",">
+            #{item}
+        </foreach>;
+        
+        DELETE FROM ${db_classalbum}.t_like
+        WHERE imageId in
+        <foreach item="item" collection="imageIds" index="index" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+	</delete>
+	
+	<!-- 删除相册 -->
+	<delete id="deleteAlbum" parameterType="JSONObject">
+		DELETE FROM ${db_classalbum}.t_album WHERE id = #{albumId};
+		DELETE FROM ${db_classalbum}.t_image WHERE albumId = #{albumId};
+		DELETE FROM ${db_classalbum}.t_comment WHERE albumId = #{albumId};
+		DELETE FROM ${db_classalbum}.t_like WHERE albumId = #{albumId};
+	</delete>
+</mapper>

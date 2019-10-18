@@ -1,0 +1,170 @@
+openApiUrl: ${OPENAPI_URL:http://openapi.cslearning.cn}
+
+classmanage:
+  atndUrl: https://uther.talkedu.cn/service/sys/zhxyIndexAtndTe
+weekly:
+  threadPoolSize: 50
+document:
+  documentHost: http://192.168.1.105/
+  compressPath: documentservice/documentConvert/compress.do
+basedata:
+  host: 
+  getTermInfo: basedataApi/BaseDataService/getCurrentTermInfoId
+point:
+  gradeConfig: 9,29,89,209,389,629,969,1409,1949,2689,3629,4769
+advice: 
+   loginName: 31e62fb200e44722ac4112e749da9a77
+my: 
+   getPhoneValidate: ${openApiUrl}/basedataApi/user/sendVerifyCode
+   updatePhoneByValidate: ${openApiUrl}/basedataApi/user/modifyMobileByVerifyCode
+   updateUserPhoto: ${openApiUrl}/rrtApi/user/uploadUserPhoto
+   judgeValidate: ${openApiUrl}/basedataApi/user/checkVerifyCode
+   getUserByUserId: ${openApiUrl}/basedataApi/user/getUserByUserId/
+   modifyUser: ${openApiUrl}/basedataApi/user/modifyUser
+   getUsersByCondition: ${openApiUrl}/basedataApi/user/getUsersByCondition
+   modifyPwdByVerifyCode: ${openApiUrl}/basedataApi/user/modifyPwdByVerifyCode
+   updatePwd: ${openApiUrl}/basedataApi/user/modifyPwdCiphertext
+   modifyEmailByVerifyCode: ${openApiUrl}/basedataApi/user/modifyEmailByVerifyCode
+   
+payorder:
+  business:
+    order:
+      getGoodsListBySchoolId: ${openApiUrl}/payApi/business/order/getGoodsListBySchoolId 
+      getOrderStatisticsListByCondition: ${openApiUrl}/payApi/business/order/getOrderStatisticsListByCondition
+      getStudentUserListByClassId: ${openApiUrl}/payApi/business/order/getStudentUserListByClassId
+      querySchoolOrdersDetails: ${openApiUrl}/payApi/business/order/querySchoolOrdersDetails
+      saveGoodsOrderRela:  ${openApiUrl}/payApi/business/order/saveGoodsOrderRela
+      isNotRepeatOrderReminder: ${openApiUrl}/payApi/business/order/isNotRepeatOrderReminder
+  wxpay: 
+    weiXinOrderClose: ${openApiUrl}/payApi/wxpay/weiXinOrderClose
+    weiXinOrderQuery: ${openApiUrl}/payApi/wxpay/weiXinOrderQuery
+    weiXinPayNotify: ${openApiUrl}/payApi/wxpay/weiXinPayNotify
+  school: 
+    config:
+      addSchoolGoods: ${openApiUrl}/payApi/school/config/addSchoolGoods
+      modifySchoolGoods: ${openApiUrl}/payApi/school/config/modifySchoolGoods
+      offLoadingSchoolGoods: ${openApiUrl}/payApi/school/config/offLoadingSchoolGoods
+      querySchoolCfg: ${openApiUrl}/payApi/school/config/querySchoolCfg
+      querySchoolCfgProducts: ${openApiUrl}/payApi/school/config/querySchoolCfgProducts
+  goods:
+    order:
+      checkSchoolNeedPay: ${openApiUrl}/payApi/goods/order/checkSchoolNeedPay
+      checkUserProduct: ${openApiUrl}/payApi/goods/order/checkUserProduct
+      queryOrdersByAccount: ${openApiUrl}/payApi/goods/order/queryOrdersByAccount
+      queryOrdersByCondition: ${openApiUrl}/payApi/goods/order/queryOrdersByCondition
+      userOrderGoodsByWeiXin: ${openApiUrl}/payApi/goods/order/userOrderGoodsByWeiXin
+      getStudentList: ${openApiUrl}/basedataApi/student/getStudentsByParentId/
+      getStudentAndAccountByAccountId: ${openApiUrl}/basedataApi/student/getStudentAndAccountByAccountId/
+    manager: 
+      queryGoodsCfg: ${openApiUrl}/payApi/goods/manager/queryGoodsCfg
+      queryGoodsList: ${openApiUrl}/payApi/goods/manager/queryGoodsList
+      queryOperaLog: ${openApiUrl}/payApi/goods/manager/queryOperaLog
+      saveGoodsInfo: ${openApiUrl}/payApi/goods/manager/saveGoodsInfo
+      updateGoodsInfo: ${openApiUrl}/payApi/goods/manager/updateGoodsInfo
+  user:
+    getOpenIdByUserIds: ${openApiUrl}/basedataApi/user/getOpenIdByUserIds
+
+clientId: a977bccc-dfd4-11e7-9100-fa163ed3019d
+secretId: 05216833-dfd5-11e7-9100-fa163ed3019d 
+ 
+logging:
+  config: classpath:logback-config.xml 
+  
+logback:
+  logpath: /disk1/logs
+  logfilecount: 10
+  logfilesize: 200MB
+  logpattern: '%d{yy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %40.40lo{40} : %m%n'
+  logfile: ${logback.logpath}/${spring.application.name}/app.%d.txt
+  logerrfile: ${logback.logpath}/${spring.application.name}/err.%d.txt
+  addresslog: ${logback.logpath}/${spring.application.name}/address/address.%d.txt
+  bannerlog: ${logback.logpath}/${spring.application.name}/banner/banner.%d.txt
+  circlelog: ${logback.logpath}/${spring.application.name}/circle/circle.%d.txt
+  classmanagelog: ${logback.logpath}/${spring.application.name}/classmanage/classmanage.%d.txt
+  pointlog: ${logback.logpath}/${spring.application.name}/point/point.%d.txt
+  weeklylog: ${logback.logpath}/${spring.application.name}/weekly/weekly.%d.txt
+  advicelog: ${logback.logpath}/${spring.application.name}/advice/advice.%d.txt
+ 
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    serviceUrl:
+      #zt-product
+       #defaultZone: http://zhx:zhx123@10.2.20.17:18001/eureka/
+       #tr-product
+       #defaultZone: http://zhx:zhx123@192.168.1.36:18001/eureka/
+       #zhxy-product
+       defaultZone: http://zhx:zhx123@192.168.1.185:18001/eureka/
+ 
+spring:
+ datasource:
+    read:
+      driver-class-name: com.mysql.jdbc.Driver
+      url: jdbc:mysql://192.168.1.189:3306/?useSSL=false&useUnicode=true&characterEncoding=utf-8&autoReconnect=true&failOverReadOnly=false&maxReconnects=10&allowMultiQueries=true
+      username: zhx
+      password: ZHXpass0o0_
+      initial-size: 5
+      min-idle: 5
+      max-active: 30
+      max-wait: 60000
+      validation-query: select 'x'
+      test-on-borrow: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+    write:
+      driver-class-name: com.mysql.jdbc.Driver
+      url: jdbc:mysql://192.168.1.188:3306/?useSSL=false&useUnicode=true&characterEncoding=utf-8&autoReconnect=true&failOverReadOnly=false&maxReconnects=10&allowMultiQueries=true
+      username: zhx
+      password: ZHXpass0o0_
+      initial-size: 5
+      min-idle: 5
+      max-active: 30
+      max-wait: 60000
+      validation-query: select 'x'
+      test-on-borrow: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      
+ redis: 
+       host: 192.168.1.41 
+       port: 6379
+       timeout: 30000
+       database: 8
+       password: ZHXpass0o0_
+       pool:
+             max-active: 10
+             min-idle: 0
+             max-idle: 10
+             max-wait: 30000
+             testOnBorrow: true
+ sleuth:
+    sampler:
+      percentage: 0.1
+
+#springboot 1.5.X 以上默认开通了安全认证，所以需要在配置文件application.properties添加以下配置，以post请求的方式来访问http://localhost:XX/refresh 就会更新修改后的配置文件  
+management:
+  security: 
+    enabled: false
+#hystrix
+feign:
+  hystrix:
+  enabled: false
+hystrix:
+  shareSecurityContext: true
+  command:
+    default:
+      circuitBreaker:
+        sleepWindowInMilliseconds: 100000
+        forceClosed: true
+      execution:
+        timeout:
+          enabled:false
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000000
+ribbon:
+  ReadTimeout: 6000000
+  ConnectTimeout: 6000000

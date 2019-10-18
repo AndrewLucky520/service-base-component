@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.point.dao.PointDao">
+
+    <insert id="createAccountPoint" parameterType="JSONObject">
+        INSERT INTO ${db_point}.t_pm_point
+        (schoolId,accountId,point)
+        VALUES
+            (#{schoolId},#{accountId},#{point});
+    </insert>
+    
+    <update id="updateAccountPoint" parameterType="JSONObject">
+        UPDATE ${db_point}.t_pm_point
+        SET point=#{point}
+        WHERE accountId=#{accountId}
+    </update>
+ 
+    <select id="getAccountPoint" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT point AS total
+        FROM ${db_point}.t_pm_point
+        WHERE accountId=#{accountId}
+    </select>
+    
+    <insert id="createPoint" parameterType="JSONObject">
+        INSERT INTO ${db_point}.t_pm_point_log${year}
+        (schoolId,accountId,bizId,point,type)
+        VALUES
+            (#{schoolId},#{accountId},#{bizId},#{point},#{type});
+    </insert>
+    
+    <select id="getPoint" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT SUM(point) AS total
+        FROM ${db_point}.t_pm_point_log${year}
+        WHERE accountId=#{accountId}
+        <if test="bizId!=null"> 
+            AND bizId=#{bizId}
+        </if>
+        <if test="type!=8"> 
+            AND type=#{type} 
+            <if test="type!=5 and type!=7 or bizId==null"> 
+                AND DATE_FORMAT(createTime,'%Y-%m-%d')=CURRENT_DATE
+            </if>
+        </if>
+        <if test="type==8"> 
+            AND type=8 
+            AND YEARWEEK(DATE_FORMAT(createTime,'%Y-%m-%d'),1)=YEARWEEK(CURRENT_DATE,1)
+        </if>
+    </select>
+    
+    <select id="getPointDetailCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT COUNT(1) AS recordCount
+        FROM ${db_point}.t_pm_point_log${year}
+        WHERE accountId=#{accountId}
+    </select>
+    
+    <select id="getPointDetail" parameterType="JSONObject" resultType="JSONObject">
+        SELECT CONCAT(DATE_FORMAT(createTime,'%Y-%m-%d %H:%i'),'  ',
+               ELT(FIELD(type,1,2,3,4,5,6,7,8),"完成签到","访问应用","发布班级圈","内容被点赞","点赞内容","内容被评论","评论内容","阅读周刊"),
+               '，经验值+',point) as content
+        FROM ${db_point}.t_pm_point_log${year}
+        WHERE accountId=#{accountId}
+        ORDER BY createTime DESC
+        <if test="pageStart!=null and pageStart>=0"> 
+            LIMIT ${pageStart},${pageSize}
+        </if>
+    </select>
+</mapper>

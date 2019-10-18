@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.weekly.dao.ClassWeeklyDao">
+
+    <select id="getWeeklyTypeList" resultType="JSONObject">
+		SELECT classifyId,classifyName
+		FROM ${db_classweekly}.t_cw_classify
+		ORDER BY classifyId
+    </select>
+  
+    <insert id="createAuthority" parameterType="JSONObject">
+        INSERT INTO ${db_classweekly}.t_cw_authority(id,schoolId,classId,creatorId,authorizedId,userType,createTime)
+        VALUES
+        <foreach item="item" collection="userList" separator=",">
+            (#{item.id}, #{item.schoolId}, #{item.classId}, #{item.creatorId}, #{item.authorizedId}, #{item.userType}, #{item.createTime})
+        </foreach>
+    </insert>
+    
+    <delete id="deleteAuthority" parameterType="JSONObject">
+        DELETE FROM ${db_classweekly}.t_cw_authority 
+        WHERE id IN  
+             <foreach item="item" collection="authorityId" index="index" open="(" close=")" separator=",">
+                #{item}
+             </foreach>
+    </delete>
+ 
+    <select id="getAuthorityList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT a.id as authorityId,c.name,IF(a.userType=11,'老师','学生') AS type
+        FROM ${db_classweekly}.t_cw_authority a,
+             ${db_account}${termInfo}.t_account c
+        WHERE a.schoolId=#{schoolId} 
+              AND a.authorizedId=c.id 
+              AND a.classId=#{classId}
+        ORDER BY a.createTime
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+    <select id="getAuthorityCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT count(id) as recordCount
+        FROM ${db_classweekly}.t_cw_authority
+        WHERE authorizedId=#{authorizedId} 
+              AND classId=#{classId}
+    </select>
+  
+    <update id="updateFirstImage" parameterType="JSONObject">
+        UPDATE ${db_classweekly}.t_cw_weekly 
+        SET firstImage=#{firstImage}
+        WHERE id=#{weeklyId}
+    </update>
+ 
+    <insert id="createWeekly" parameterType="JSONObject">
+        INSERT INTO ${db_classweekly}.t_cw_weekly
+        (id,schoolId,classId,creatorId,creatorName,title,classifyId,views,createTime,firstImage)
+        VALUES
+            (#{weeklyId},#{schoolId},#{classId},#{accountId},#{accountName},#{title},#{classifyId},0,#{createTime},#{firstImage});
+    </insert>
+    
+    <insert id="createWeeklyAttachment" parameterType="JSONObject">
+        INSERT INTO ${db_classweekly}.t_cw_weekly_attachment
+        (id,schoolId,weeklyId,fileId,accessUrl,pdfAccessUrl,name)
+        VALUES
+            (#{id},#{schoolId},#{weeklyId},#{fileId},#{accessUrl},#{pdfAccessUrl},#{name});
+    </insert>
+    
+    <insert id="createDocumentImage" parameterType="JSONObject">
+        INSERT INTO ${db_classweekly}.t_cw_document_image
+        (id,documentId,schoolId,fileId,imgIndex,accessUrl)
+        VALUES
+        <foreach item="item" collection="imageList" separator=",">
+            (#{item.id}, #{id}, #{schoolId}, #{item.fileId}, #{item.imgIndex}, #{item.accessUrl})
+        </foreach>
+    </insert>
+    
+    <delete id="deleteWeekly" parameterType="JSONObject">
+        DELETE FROM ${db_classweekly}.t_cw_weekly 
+        WHERE id=#{weeklyId}
+    </delete>
+ 
+    <delete id="deleteWeeklyAttachment" parameterType="JSONObject">
+        DELETE FROM ${db_classweekly}.t_cw_weekly_attachment 
+        WHERE weeklyId=#{weeklyId}
+    </delete>
+ 
+    <delete id="deleteDocumentImage" parameterType="JSONObject">
+        DELETE FROM ${db_classweekly}.t_cw_document_image 
+        WHERE documentId in 
+	        (SELECT id 
+	        FROM ${db_classweekly}.t_cw_weekly_attachment 
+	        WHERE weeklyId=#{weeklyId})
+    </delete>
+ 
+    <select id="getWeeklyList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT a.id as weeklyId,a.schoolId,a.creatorId,a.creatorName,a.title,a.classifyId,
+               IF(a.schoolId=1002 AND a.views&lt;40,a.views+(a.creatorId MOD 40)+40,a.views) AS views,
+               DATE_FORMAT(a.createTime,'%Y-%m-%d %H:%i') as createTime,a.firstImage,
+               (SELECT classifyName 
+               FROM ${db_classweekly}.t_cw_classify
+               WHERE classifyId=a.classifyId) as classifyName,
+               IF(a.creatorId=#{accountId},1,0) AS deletable
+        FROM ${db_classweekly}.t_cw_weekly a
+        WHERE a.schoolId=#{schoolId} and (a.classId=#{classId})
+        ORDER BY a.createTime desc
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+    <select id="getWeeklyCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT count(a.id) as recordCount
+        FROM ${db_classweekly}.t_cw_weekly a
+        WHERE a.schoolId=#{schoolId} and (a.classId=#{classId})
+    </select>
+  
+    <select id="getWeekly" parameterType="JSONObject" resultType="JSONObject">
+        SELECT a.id as weeklyId,a.schoolId,a.creatorId,a.creatorName,a.title,a.classifyId,
+        	   IF(a.schoolId=1002 AND a.views&lt;40,a.views+(a.creatorId MOD 40)+40,a.views) AS views,
+               DATE_FORMAT(a.createTime,'%Y-%m-%d %H:%i') as createTime,
+               c.id as documentId,c.name as documentName,c.accessUrl,c.pdfAccessUrl,
+               (SELECT classifyName 
+               FROM ${db_classweekly}.t_cw_classify 
+               WHERE classifyId=a.classifyId) as classifyName
+        FROM ${db_classweekly}.t_cw_weekly a,
+             ${db_classweekly}.t_cw_weekly_attachment c
+        WHERE a.id=c.weeklyId AND a.id=#{weeklyId}
+    </select>
+  
+    <select id="getDocumentImage" parameterType="JSONObject" resultType="JSONObject">
+        SELECT imgIndex,accessUrl
+        FROM ${db_classweekly}.t_cw_document_image
+        WHERE documentId=#{documentId}
+        ORDER BY imgIndex
+    </select>
+  
+    <update id="updateViews" parameterType="JSONObject">
+        UPDATE ${db_classweekly}.t_cw_weekly 
+        SET views=views+1
+        WHERE id=#{weeklyId}
+    </update>
+  
+    <sql id="gradeName">
+        ELT(FIELD(currentLevel,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
+        "小小班","小班","中班","大班","一年级","二年级","三年级","四年级","五年级","六年级","初一","初二","初三","高一","高二","高三") AS gradeName
+    </sql>
+    
+    <sql id="gradeTable">
+        (SELECT id,IF(#{termInfoYear}-YEAR(FROM_UNIXTIME(`createTime`))>0,
+                #{termInfoYear}-YEAR(FROM_UNIXTIME(`createTime`))+createLevel,createLevel) AS currentLevel
+        FROM ${db_account}${termInfo}.t_grade 
+        WHERE status=1 
+              AND schoolId=#{schoolId})
+    </sql>
+    
+    <sql id="getLevels">
+        (SELECT id 
+        FROM <include refid="gradeTable"/> as g 
+        WHERE currentLevel=#{gradeId})
+    </sql>
+    
+    <sql id="classKey">
+        ,type,recordcount,concat(name,'(',recordcount,'人',')') as label
+    </sql>
+    
+    <sql id="weeklyCount">
+        (select count(s.id) from ${db_classweekly}.t_cw_weekly s 
+        WHERE class.id=s.classId) as recordcount
+    </sql>
+    
+    <sql id="userClassIds">
+        (SELECT DISTINCT id 
+        FROM 
+            (SELECT class.id 
+            FROM ${db_account}${termInfo}.t_teacher_course course, 
+                 ${db_account}${termInfo}.t_class class
+            WHERE course.teacherId=#{userId} 
+                  AND course.classId=class.id 
+                  AND class.schoolId=#{schoolId}
+                  AND class.status=1 
+            UNION ALL
+            SELECT class.id 
+            FROM ${db_account}${termInfo}.t_class class
+            WHERE class.headTeacherId=#{userId} 
+                  AND class.schoolId=#{schoolId}
+                  AND class.status=1
+            UNION ALL
+            SELECT student.classId AS id
+            FROM ${db_account}${termInfo}.t_student student
+            WHERE student.stdId=#{userId} 
+                  AND student.schoolId=#{schoolId}
+                  AND student.status=1
+            UNION ALL
+            SELECT class.id
+            FROM ${db_account}${termInfo}.t_parent parent,
+                 ${db_account}${termInfo}.t_class class
+            WHERE parent.parentId=#{userId} 
+                  AND parent.classId=class.id
+                  AND class.schoolId=#{schoolId}
+                  AND class.status=1) AS SS)
+    </sql>
+    
+    <select id="getClass" parameterType="JSONObject" resultType="JSONObject">
+        SELECT class.id as classId,class.className,class.schoolId
+        FROM ${db_account}${termInfo}.t_class class
+        WHERE class.status=1 
+        <if test="classId!=null and classId!=''"> 
+              AND class.id=#{classId}
+        </if>
+        <if test="extClassId!=null and extClassId!=''"> 
+              AND class.extId=#{extClassId}
+        </if>
+    </select>
+   
+    <select id="getUserWeeklyClassList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT class.id as classId,class.className,
+	           emblem.accessUrl,<include refid="weeklyCount"/>
+        FROM ${db_account}${termInfo}.t_class class
+             LEFT JOIN <include refid="gradeTable"/> as grade 
+             ON (grade.id=class.gradeId)
+             LEFT JOIN ${db_classweekly}.t_cw_classemblem emblem
+             ON (emblem.classId=class.id)
+        WHERE class.id in <include refid="userClassIds"/>
+        ORDER BY grade.currentLevel,LENGTH(class.className),class.className
+    </select>
+    
+    <select id="getClassList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT class.id as classId,class.className
+        <if test="needRecordCount==1"> 
+            ,emblem.accessUrl,<include refid="weeklyCount"/>
+        </if>
+        FROM ${db_account}${termInfo}.t_class class
+        <if test="needRecordCount==1"> 
+             LEFT JOIN ${db_classweekly}.t_cw_classemblem emblem
+             ON (emblem.classId=class.id)
+        </if>
+        WHERE class.status=1 
+              AND class.schoolId=#{schoolId} 
+              AND class.gradeId in <include refid="getLevels"/>
+        ORDER BY LENGTH(class.className),class.className
+    </select>
+
+    <select id="getGradeList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT currentLevel as gradeId,<include refid="gradeName"/>
+        FROM <include refid="gradeTable"/> AS g
+        WHERE currentLevel&lt;=21 
+              AND currentLevel&gt;=6
+        ORDER BY currentLevel
+    </select>
+   
+    <select id="getManagedClassList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT classId,className
+        FROM
+	        (SELECT DISTINCT b.id as classId,b.className
+	        FROM ${db_account}${termInfo}.t_class b,
+	             ${db_classweekly}.t_cw_authority c
+	        WHERE b.id=c.classId 
+	              AND c.authorizedId=#{accountId} 
+	              AND b.status=1 
+	              AND b.schoolId=#{schoolId}
+	        UNION ALL
+	        SELECT b.id as classId,b.className
+	        FROM ${db_account}${termInfo}.t_class b
+	        WHERE b.headTeacherId=#{userId} 
+	              AND b.status=1 
+	              AND b.schoolId=#{schoolId}) as t
+        ORDER BY LENGTH(className),className
+    </select>
+   
+    <select id="getWeeklyStatistics" parameterType="JSONObject" resultType="JSONObject">
+        SELECT w.className,<include refid="gradeName"/>,recordCount
+        FROM
+	        (SELECT c.className,c.gradeId,b.classId,count(b.id) as recordCount
+	        FROM ${db_classweekly}.t_cw_weekly b, 
+	             ${db_account}${termInfo}.t_class c
+	        WHERE b.schoolId=#{schoolId} AND b.classId=c.id
+	        <if test="beginDate!=null and beginDate!=''"> 
+	            AND STR_TO_DATE(DATE_FORMAT(b.createTime,'%Y%m%d'),'%Y%m%d') between #{beginDate} AND #{endDate}
+	        </if>
+	        <if test="gradeId!=null and gradeId!=''"> 
+	            AND c.gradeId in <include refid="getLevels"/>
+	        </if>
+	        <if test="classId!=null and classId!=''"> 
+	            AND b.classId=#{classId}
+	        </if>
+	        GROUP BY c.gradeId,b.classId
+	        ) as w,<include refid="gradeTable"/> as g
+        WHERE g.id=w.gradeId
+        ORDER BY g.currentLevel,LENGTH(w.className),w.className
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+    
+    <insert id="createClassEmblem" parameterType="JSONObject">
+        INSERT INTO ${db_classweekly}.t_cw_classemblem
+        (schoolId,classId,creatorId,fileId,accessUrl)
+        VALUES
+        (#{schoolId},#{classId},#{accountId},#{fileId},#{accessUrl})
+    </insert>
+    
+    <update id="updateClassEmblem" parameterType="JSONObject">
+        UPDATE ${db_classweekly}.t_cw_classemblem 
+        SET fileId=#{fileId},accessUrl=#{accessUrl}
+        WHERE classId=#{classId}
+    </update>
+ 
+    <select id="getClassEmblem" parameterType="JSONObject" resultType="JSONObject">
+        SELECT accessUrl
+        FROM ${db_classweekly}.t_cw_classemblem
+        WHERE classId=#{classId}
+    </select>
+  
+</mapper>

@@ -1,0 +1,204 @@
+def docker_image = "${env.DOCKER_REGISTRY_URL}"
+pipeline {
+  agent {
+    kubernetes {
+      label "jenkins-slave-${UUID.randomUUID().toString()}"
+      defaultContainer 'jnlp'
+      yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-slave
+spec:
+  serviceAccount: cicd
+  nodeSelector:
+    ci/slave: 'true'
+  containers:
+  - name: jnlp
+    volumeMounts:
+    - mountPath: /home/jenkins
+      name: jenkins-slave
+  - name: maven
+    image: maven:3.5-jdk-8-alpine
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - mountPath: /data/maven-repository
+      name: maven-repository
+    - mountPath: /usr/share/maven/conf/settings.xml
+      subPath: settings.xml
+      name: maven-settings
+    - mountPath: /home/jenkins
+      name: jenkins-slave
+  - name: docker
+    image: docker
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - mountPath: /home/jenkins
+      name: jenkins-slave
+    - mountPath: /var/run/docker.sock
+      name: docker-docker
+    - mountPath: /root/.docker/config.json
+      subPath: config.json
+      name: docker-config
+  - name: k8s-kubectl
+    image: lachlanevenson/k8s-kubectl
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - mountPath: /home/jenkins
+      name: jenkins-slave
+  volumes:
+  - name: jenkins-slave
+    persistentVolumeClaim:
+      claimName: jenkins-slave
+  - name: maven-repository
+    persistentVolumeClaim:
+      claimName: maven-repository
+  - name: maven-settings
+    configMap:
+      name: maven-config
+      items:
+      - key: settings.xml
+        path: settings.xml
+  - name: docker-docker
+    hostPath:
+      path: /var/run/docker.sock
+  - name: docker-config
+    secret:
+      secretName: ${env.DOCKER_REGISTRY_SECRET}
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+"""
+    }
+  }
+  options {
+    //超时一小时
+    timeout(time: 1, unit: 'HOURS')
+   }
+// #######################需要修改的区域 开始#################################
+  environment {
+  	// 注册中心域名默认是
+    EUREKA_NAME='register'
+    // 服务的域名,默认是register，最好不要建议修改哦
+    DOMAIN_NAME='service-base-component'
+    // docker容器内部端口，不建议修改
+    CONTAINER_PORT=80
+    // 注册中心的实例数量
+    REPLICAS_NUM=1
+    // 注册中心认证的用户密码,没有就设置为空
+    EUREKA_USR_PASSWD="zhx:zhx123@"
+    // 配置文件存在的git仓库 配置文件存放格式是repo/$PROJECT_NAME/env.conf
+    CONFIG_GIT_URL='https://git.talkweb.com.cn/talkweb-repo/talkweb-school/school-boot.git'
+    // 编译后的jar文件名称,
+    // JAVA_JAR='你的编译后jar文件名称'
+  }
+  parameters {
+     // 修改部署的域名空间
+    string(name:'name_space', defaultValue: "talkweb-school", description: '发布的命名空间')
+    // 修改为子项目名称
+    string(name:'module', defaultValue: "service-base-component", description: '基础数据服务')
+    // 修改部署环境选择 直接在界面配置 dev、devk、test、prod
+    //choice(name: 'profile', choices: ['test', 'prod'], description: '部署环境')
+    // 选择发布类型-按标签还是按分支发布，默认值是分支（remotes）,标签(tags)
+    choice(name: 'pub_type', choices: ['remotes','tags'], description: '按标签还是按分支发布，默认值是分支（remotes）,标签(tags)')
+  }
+// ########################需要修改的区域 结束################################
+  stages {
+    stage('Run maven') {
+      steps {
+        script{
+            if (params.Tag && params.pub_type == "tags") {
+                tag = "$params.Tag"
+            } else {
+                sh "git rev-parse --short HEAD > commit-id"
+                tag = readFile('commit-id').replace("\n", "").replace("\r", "")
+            }
+            docker_image = "$docker_image/${params.name_space}/${params.module}:$tag"
+        }
+        dir("${env.WORKSPACE}") {
+            container('maven') {
+              sh 'mvn -version'
+              sh "mvn clean package  -Dmaven.test.skip=true"
+            }
+        }
+      }
+    }
+    stage('Build And Push Docker Image'){
+      steps {
+        dir("${env.WORKSPACE}") {
+          container('docker') {
+            script {
+              if (env.JAVA_JAR) {
+                mvn_jar="${env.JAVA_JAR}"
+              } else {
+                mvn_jar="${params.module}.jar"
+              }
+              sh "docker build -t $docker_image --build-arg JAR_FILE=$mvn_jar  ${env.WORKSPACE}"
+            }
+            echo "完成DOCKER镜像打包......"
+            sh "docker push $docker_image"
+          }
+        }
+      }
+    }
+    stage('Deploy'){
+      steps{
+        dir("${env.WORKSPACE}") {
+          container('k8s-kubectl') {
+            stash name: "k8s.yaml", includes: "k8s.yaml"
+            echo "部署应用的配置"
+            git  branch: "${params.profile}", credentialsId: "${env.CREDENTIALS_ID}", url: "${env.CONFIG_GIT_URL}"
+            sh "if [[ \$(kubectl get  configmap -n ${params.name_space}|awk '{ print \$1 }' |grep -Fx ${params.name_space}-${params.module} ) = ${params.name_space}-${params.module} ]]; then  \
+                  kubectl  -n ${params.name_space} delete configmap  ${params.name_space}-${params.module}; \
+               fi;"
+            sh "kubectl -n ${params.name_space} create configmap  ${params.name_space}-${params.module} --from-env-file=repo/${params.module}/env.conf"
+
+            echo "部署应用"
+            unstash name: "k8s.yaml"
+            script {
+              if (params.profile != 'dev' && params.profile != 'devk') {
+                 EUREKA_SERVER_ADDRESS="http://${EUREKA_USR_PASSWD}${EUREKA_NAME}-0.${EUREKA_NAME}/eureka,http://${EUREKA_USR_PASSWD}${EUREKA_NAME}-1.${EUREKA_NAME}/eureka,http://${EUREKA_USR_PASSWD}.${EUREKA_NAME}-2.${EUREKA_NAME}/eureka"
+              } else  {
+                 EUREKA_SERVER_ADDRESS="http://${EUREKA_USR_PASSWD}${EUREKA_NAME}/eureka"
+              }
+            }
+            sh "sed -e 's#__DOCKER_IMAGE__#'$docker_image'#'  \
+            -e 's#__DOCKER_REGISTRY_SECRET__#'${env.DOCKER_REGISTRY_SECRET}'#' \
+            -e 's#__DOMAIN_NAME__#'${env.DOMAIN_NAME}'#' \
+            -e 's#__NAME_SPACE__#'${params.name_space}'#' \
+            -e 's#__PROFILE__#'${params.profile}'#' \
+            -e 's#__REPLICAS_NUM__#'${env.REPLICAS_NUM}'#' \
+            -e 's#__CONTAINER_PORT__#'${env.CONTAINER_PORT}'#' \
+            -e 's#__EUREKA_SERVER_ADDRESS__#'${EUREKA_SERVER_ADDRESS}'#' \
+            -e 's#__CONFIG_MAP__#'${params.name_space}-${params.module}'#' \
+            k8s.yaml | kubectl apply -f -"
+          }
+        }
+      }
+    }
+  }
+  post {
+    always {
+        echo '执行完成。'
+    }
+    success {
+        echo '恭喜你，发布成功了!'
+    }
+    unstable {
+        echo 'I am unstable :发布不稳定哦！'
+    }
+    failure {
+        echo '发布失败啦，请查明原因哦！'
+    }
+    changed {
+        echo 'Things were different before...'
+    }
+  }
+}

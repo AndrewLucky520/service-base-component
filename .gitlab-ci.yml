@@ -1,0 +1,41 @@
+variables:
+  IMAGE_PRE: $DOCKER_HUP_URL/talkweb-school
+  MODULE: service-base-component
+  VERSION: $CI_COMMIT_TAG
+
+cache:
+  paths:
+  - target/
+
+stages:
+- build-java
+- build-docker
+
+job_build_tag_java:
+  only:
+  - tags
+  stage: build-java
+  script:
+  - contain_id=$(docker run --rm -t -d -v $PWD:/data/workspace -v /app/maven3/conf/settings.xml:/root/.m2/settings.xml -v /data/maven-repo/:/data/maven-repo/ -w /data/workspace maven:3.5-jdk-8-alpine cat)
+  - echo "容器ID：${contain_id}"
+  - docker exec -t ${contain_id}  mvn -version
+  - echo "开始maven打包"
+  - docker exec -t ${contain_id} mvn clean package -Dmaven.test.skip=true
+  - docker exec -t ${contain_id} chmod -R 777 .
+  - echo "删除编译的容器"
+  - docker rm -f ${contain_id}
+  - echo "完成删除编译的容器"
+
+job_build_tag_docker:
+  only:
+  - tags
+  stage: build-docker
+  #需要配置 DOCKER_HUP_URL:hub.talkweb.com.cn  DOCKER_HUP_USER  DOCKER_HUP_PWD
+  before_script:
+  - docker login  $DOCKER_HUP_URL --username  $DOCKER_HUP_USER --password $DOCKER_HUP_PWD
+  script:
+  - echo "开始打包docker镜像"
+  - docker build -t $IMAGE_PRE/$MODULE:$VERSION --build-arg JAR_FILE=$MODULE.jar .
+  - docker push $IMAGE_PRE/$MODULE:$VERSION
+  after_script:
+  - docker logout  $DOCKER_HUP_URL

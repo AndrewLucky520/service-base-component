@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: service-base-component
+  profiles:
+    active: ${PROFILE:pre}
+   
+server: 
+  port: ${APP_PORT:18588}
+  context-path: /basecomponent
+
+database:
+  databaseNames:
+    db_sportsmeet: cc_sportsmeet
+    db_resource: cc_resource
+    db_addressbook: cc_addressbook
+    db_account: accountdb_cloud_
+    db_classmanage: cc_classmanage
+    db_classweekly: cc_classweekly
+    db_classcircle: cc_classcircle
+    db_point: authority
+    db_banner: authority
+    db_advice: authority
+    db_classalbum: cc_classalbum
+    db_authority: authority
+    db_guide: authority

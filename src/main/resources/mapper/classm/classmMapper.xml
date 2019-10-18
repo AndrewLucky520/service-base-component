@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.classm.dao.ClassManageDao">
+ 	<insert id="insertInitSeat" parameterType="JSONObject">
+		INSERT INTO ${db_classmanage}.t_cm_init(id,classId,schoolId,x,y)
+		VALUES
+			(#{id},#{classId},#{schoolId},#{x},#{y});
+	</insert>
+	
+	<update id="updateInitSeat"  parameterType="JSONObject">
+	 	UPDATE ${db_classmanage}.t_cm_init 
+	 	SET x=#{x},y=#{y}
+	 	WHERE classId=#{classId}
+	</update>
+
+    <select id="getInitSeat" parameterType="JSONObject" resultType="JSONObject">
+		SELECT * 
+		FROM ${db_classmanage}.t_cm_init 
+		WHERE classId=#{classId} 
+    </select>
+  
+ 	<insert id="insertSeat" parameterType="JSONObject">
+		INSERT INTO ${db_classmanage}.t_cm_seat(id,classId,schoolId,accountId,x,y)
+		VALUES
+			(#{id},#{classId},#{schoolId},#{accountId},#{x},#{y});
+	</insert>
+	
+	<update id="updateSeat"  parameterType="JSONObject">
+	 	UPDATE ${db_classmanage}.t_cm_seat 
+	 	SET x=#{x},y=#{y}
+	 	WHERE classId=#{classId} 
+	 	      AND accountId=#{accountId}
+	</update>
+	
+	<delete id="deleteSeat" parameterType="JSONObject">  
+        DELETE FROM ${db_classmanage}.t_cm_seat 
+        WHERE classId=#{classId} 
+              AND accountId=#{accountId}
+	</delete>
+	
+    <select id="getSeatList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT seat.accountId,seat.x,seat.y,account.name,account.extId 
+		<if test="needPerformance==1"> 
+            ,(SELECT COUNT(performanceType) FROM ${db_classmanage}.t_cm_performance perf 
+            WHERE perf.accountId=seat.accountId
+            AND DATE_FORMAT(createTime,'%Y-%m-%d')=CURRENT_DATE) as performance
+        </if>
+		FROM ${db_classmanage}.t_cm_seat seat, 
+		     ${db_account}${termInfo}.t_account account
+		WHERE seat.accountId=account.id 
+		      AND seat.classId=#{classId} 
+		      AND account.status=1
+    </select>
+
+    <select id="getSeat" parameterType="JSONObject" resultType="JSONObject">
+		SELECT id,classId,accountId,x,y 
+		FROM ${db_classmanage}.t_cm_seat 
+		WHERE classId=#{classId} 
+		      AND accountId=#{accountId}	
+    </select>
+
+    <select id="getSeat2" parameterType="JSONObject" resultType="JSONObject">
+		SELECT id,classId,accountId,x,y 
+		FROM ${db_classmanage}.t_cm_seat 
+		WHERE classId=#{classId} 
+		      AND x=#{x} 
+		      AND y=#{y}	
+    </select>
+
+    <select id="getStudentList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT student.accountId,student.name,account.extId
+        <if test="needPerformance==1"> 
+            ,(SELECT COUNT(performanceType) FROM ${db_classmanage}.t_cm_performance perf 
+            WHERE perf.accountId=student.accountId 
+            AND DATE_FORMAT(createTime,'%Y-%m-%d')=CURRENT_DATE) as performance
+        </if>
+		FROM ${db_account}${termInfo}.t_student student, 
+             ${db_account}${termInfo}.t_account account
+		WHERE student.classId=#{classId} 
+		      AND student.status=1
+		      AND student.accountId=account.id
+              AND account.status=1
+    </select>
+
+    <select id="getClassInfo" parameterType="JSONObject" resultType="JSONObject">
+		SELECT DISTINCT class.extId as classId,school.extId as schoolId 
+		FROM ${db_account}${termInfo}.t_student student,
+		     ${db_account}${termInfo}.t_school school,
+		     ${db_account}${termInfo}.t_class class 
+		WHERE student.classId=class.id 
+		      AND class.id=#{classId} 
+		      AND student.schoolId=school.id
+    </select>
+
+    <insert id="insertPerformance" parameterType="JSONObject">
+        INSERT INTO ${db_classmanage}.t_cm_performance
+        (schoolId,creatorId,accountId,performanceType)
+        VALUES
+        <foreach item="item" collection="performance" separator=",">
+            (#{schoolId},#{creatorId},#{accountId},#{item})
+        </foreach>
+    </insert>
+    
+    <delete id="deletePerformance" parameterType="JSONObject">
+        DELETE 
+        FROM ${db_classmanage}.t_cm_performance 
+        WHERE accountId=#{accountId} AND DATE_FORMAT(createTime,'%Y-%m-%d')=CURRENT_DATE
+    </delete>
+ 
+    <select id="getPerformance" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT performanceType as performance
+        FROM ${db_classmanage}.t_cm_performance 
+        WHERE accountId=#{accountId} AND DATE_FORMAT(createTime,'%Y-%m-%d')=CURRENT_DATE
+    </select>
+  
+</mapper>

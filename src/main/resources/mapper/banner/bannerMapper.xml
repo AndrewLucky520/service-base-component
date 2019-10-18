@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.banner.dao.BannerDao">
+
+	<insert id="insertRelationBatch" parameterType="java.util.List">
+		insert into ${db_banner}.t_banner_relation
+		(BANNER_ID,GRADE_ID,ROLE_ID)
+		<foreach collection="list" index="index" item="item"
+			separator=" UNION ALL ">
+			select #{item.bannerId,jdbcType=INTEGER},
+			#{item.gradeId,jdbcType=VARCHAR}, #{item.roleId,jdbcType=VARCHAR}
+			from dual
+		</foreach>
+	</insert>
+	
+	<insert id="insertBannerInfo" useGeneratedKeys="true" keyColumn="id" keyProperty="id" parameterType="com.talkweb.basecomp.banner.entity.BannerInfo">
+		INSERT INTO ${db_banner}.t_banner_info
+		(IMG_SOURCE,SCHOOL_ID,URL_PATH,PATH_TYPE, TYPE, STATUS,PUBLISH_USER,PUBLISH_TIME,UPDATE_USER,UPDATE_TIME)
+		VALUES
+		(#{imgSource},#{schoolId},#{urlPath},#{pathType}, #{type},#{status},#{publishUser},#{publishTime},#{updateUser},#{updateTime});
+	</insert>
+
+	<select id="getBannerInfo" parameterType="JSONObject"
+		resultType="JSONObject">
+		SELECT b.* FROM ${db_banner}.t_banner_info b 
+		inner join ${db_banner}.t_banner_relation r on r.BANNER_ID = b.id
+		inner join ${db_account}#{termInfoId}.t_user u on r.ROLE_ID=u.role 
+		WHERE b.SCHOOL_ID=#{schoolId}
+		and r.GRADE_ID=#{gradeId}
+		and b.TYPE=#{type}
+		and u.id=#{userId}
+		and b.STATUS=0 
+		group by b.id 
+	</select>
+
+	<select id="getBannerByPublish" parameterType="JSONObject"
+		resultType="JSONObject">
+		SELECT * FROM ${db_banner}.t_banner_info 
+		WHERE SCHOOL_ID=#{schoolId} 
+		and TYPE=#{type} 
+		and STATUS=0
+	</select>
+	
+	<select id="getBannerRelation" parameterType="JSONObject"
+		resultType="JSONObject">
+		SELECT * FROM ${db_banner}.t_banner_relation 
+		WHERE BANNER_ID=#{bannerId} 
+	</select>
+
+	<update id="updateBanner" parameterType="com.talkweb.basecomp.banner.entity.BannerInfo">
+		update ${db_banner}.t_banner_info
+		<set>
+			<if test="imgSource != null">
+				IMG_SOURCE = #{imgSource,jdbcType=VARCHAR},
+			</if>
+			<if test="schoolId != null">
+				SCHOOL_ID = #{schoolId,jdbcType=VARCHAR},
+			</if>
+			<if test="pathType != null">
+				PATH_TYPE = #{pathType,jdbcType=INTEGER},
+			</if>
+			<if test="type != null">
+				TYPE = #{type,jdbcType=VARCHAR},
+			</if>
+			URL_PATH = #{urlPath,jdbcType=VARCHAR},
+			<if test="status != null">
+				STATUS = #{status,jdbcType=INTEGER},
+			</if>
+			<if test="updateUser != null">
+				UPDATE_USER = #{updateUser,jdbcType=VARCHAR},
+			</if>
+			<if test="updateTime != null">
+				UPDATE_TIME = #{updateTime,jdbcType=TIMESTAMP},
+			</if>
+		</set>
+		where ID = #{id,jdbcType=INTEGER}
+	</update>
+	
+	<update id="deleteBanner" parameterType="JSONObject">
+		update ${db_banner}.t_banner_info 
+		set STATUS = 1 
+		WHERE id=#{bannerId}
+	</update>
+	
+	<delete id="deleteBannerRelation" parameterType="JSONObject">
+		DELETE FROM ${db_banner}.t_banner_relation
+		WHERE BANNER_ID=#{bannerId}
+	</delete>
+	
+	<select id="getSchoolList" parameterType="JSONObject"
+		resultType="JSONObject">
+		SELECT * FROM ${db_account}#{termInfoId}.t_school 
+		<where> 
+			<if test="areaCode!=null">and areaCode=#{areaCode}</if>
+		</where>
+	</select>
+	
+	<select id="queryGradeList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT
+		g.`id`,g.`createLevel`,g.`createTime`,IF(#{termYear}-YEAR(FROM_UNIXTIME(g.`createTime`))>0,
+		#{termYear}-YEAR(FROM_UNIXTIME(g.`createTime`))+g.createLevel
+		,g.createLevel
+		) AS currentLevel
+		FROM ${db_account}#{termInfoId}.`t_grade` g WHERE
+		g.`schoolId`= #{schoolId};
+	</select>
+</mapper>

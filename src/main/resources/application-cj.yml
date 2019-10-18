@@ -1,0 +1,132 @@
+classmanage:
+  atndUrl: https://uther.talkedu.cn/service/sys/zhxyIndexAtndTe
+weekly:
+  threadPoolSize: 20
+document:
+  documentHost: http://192.168.0.6:27022/
+  compressPath: documentservice/documentConvert/compress.do
+basedata:
+  host: http://192.168.0.6:18011/
+  getTermInfo: basedataApi/BaseDataService/getCurrentTermInfoId
+point:
+  gradeConfig: 9,29,89,209,389,629,969,1409,1949,2689,3629,4769
+advice: 
+   loginName: 31e62fb200e44722ac4112e749da9a77
+my: 
+   getPhoneValidate: http://192.168.0.5:8006/basedataApi/user/sendVerifyCode
+   updatePhoneByValidate: http://192.168.0.5:8006/basedataApi/user/modifyMobileByVerifyCode
+   updateUserPhoto: http://192.168.0.5:8006/rrtApi/user/uploadUserPhoto
+   judgeValidate: http://192.168.0.5:8006/basedataApi/user/checkVerifyCode
+   getUserByUserId: http://192.168.0.5:8006/basedataApi/user/getUserByUserId/
+   modifyUser: http://192.168.0.5:8006/basedataApi/user/modifyUser
+   getUsersByCondition: http://192.168.0.5:8006/basedataApi/user/getUsersByCondition
+   modifyPwdByVerifyCode: http://192.168.0.5:8006/basedataApi/user/modifyPwdByVerifyCode
+   updatePwd: http://192.168.0.5:8006/basedataApi/user/modifyPwdCiphertext
+   modifyEmailByVerifyCode: http://192.168.0.5:8006/basedataApi/user/modifyEmailByVerifyCode
+clientId: a977bccc-dfd4-11e7-9100-fa163ed3019d
+secretId: 05216833-dfd5-11e7-9100-fa163ed3019d
+
+logging:
+  level:
+    root: INFO
+    org.hibernate: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.type.descriptor.sql.BasicExtractor: TRACE
+    com.netflix: ERROR
+    com.talkweb: INFO
+
+logback:
+  logpath: /home/logs
+  logfilecount: 10
+  logfilesize: 200MB
+  logpattern: '%d{yy-MM-dd HH:mm:ss.SSS} %5p [%15.15t] %40.40lo{40} : %m%n'
+  logfile: ${logback.logpath}/${spring.application.name}/app.%d.txt
+  logerrfile: ${logback.logpath}/${spring.application.name}/err.%d.txt
+  addresslog: ${logback.logpath}/${spring.application.name}/address/address.%d.txt
+  bannerlog: ${logback.logpath}/${spring.application.name}/banner/banner.%d.txt
+  circlelog: ${logback.logpath}/${spring.application.name}/circle/circle.%d.txt
+  classmanagelog: ${logback.logpath}/${spring.application.name}/classmanage/classmanage.%d.txt
+  pointlog: ${logback.logpath}/${spring.application.name}/point/point.%d.txt
+  weeklylog: ${logback.logpath}/${spring.application.name}/weekly/weekly.%d.txt
+  advicelog: ${logback.logpath}/${spring.application.name}/advice/advice.%d.txt
+ 
+eureka:
+  instance:
+    #preferIpAddress: true
+    hostname: ${IP_ADDRESS:127.0.0.1}
+  client:
+    serviceUrl:
+       #defaultZone: http://zhx:zhx123@192.168.1.222:18001/eureka/
+       defaultZone: ${EUREKA_SERVER_ADDRESS:http://zhx:zhx123@127.0.0.1:18001/eureka/}
+ 
+spring:
+ datasource:
+    read:
+      driver-class-name: com.mysql.jdbc.Driver
+      url: jdbc:mysql://192.168.0.6:3306/?useSSL=false&useUnicode=true&characterEncoding=utf-8&autoReconnect=true&failOverReadOnly=false&maxReconnects=10&allowMultiQueries=true
+      username: root
+      password: Talkweb@cj02
+      initial-size: 5
+      min-idle: 5
+      max-active: 10
+      max-wait: 60000
+      validation-query: select 'x'
+      test-on-borrow: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+    write:
+      driver-class-name: com.mysql.jdbc.Driver
+      url: jdbc:mysql://192.168.0.6:3306/?useSSL=false&useUnicode=true&characterEncoding=utf-8&autoReconnect=true&failOverReadOnly=false&maxReconnects=10&allowMultiQueries=true
+      username: root
+      password: Talkweb@cj02
+      initial-size: 5
+      min-idle: 5
+      max-active: 10
+      max-wait: 60000
+      validation-query: select 'x'
+      test-on-borrow: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+
+ redis: 
+       host: 106.12.22.145
+       port: 6379
+       timeout: 30000
+       database: 8
+       password: talkweb@zhx
+       pool:
+             max-active: 10
+             min-idle: 0
+             max-idle: 50
+             max-wait: 30000
+             testOnBorrow: true
+ sleuth:
+    sampler:
+      percentage: 0.1
+
+#springboot 1.5.X 以上默认开通了安全认证，所以需要在配置文件application.properties添加以下配置，以post请求的方式来访问http://localhost:XX/refresh 就会更新修改后的配置文件  
+management:
+  security: 
+    enabled: false
+#hystrix
+feign:
+  hystrix:
+  enabled: false
+hystrix:
+  shareSecurityContext: true
+  command:
+    default:
+      circuitBreaker:
+        sleepWindowInMilliseconds: 100000
+        forceClosed: true
+      execution:
+        timeout:
+          enabled:false
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000000
+ribbon:
+  ReadTimeout: 6000000
+  ConnectTimeout: 6000000

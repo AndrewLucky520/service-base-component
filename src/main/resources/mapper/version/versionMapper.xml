@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.versionManager.dao.VersionManagerDao">
+ 
+    <select id="getVersionList"   parameterType="JSONObject" resultType="JSONObject">
+          select  versionId , versionNo , publishDate , publisher, userId , type , detail , status from
+          ${db_authority}.t_version 
+          where 1 = 1
+          <if test="type!=null and type!='' ">
+            and type like  CONCAT('%',#{type},'%')
+          </if>
+          <if test="status !=null and status !='' ">
+            and status = #{status}
+          </if>
+          <if test="searchText!=null and searchText!='' ">
+            and  ( versionNo like  CONCAT('%',#{searchText},'%') or detail like  CONCAT('%',#{searchText},'%')   ) 
+          </if>
+          order by publishDate desc , createDate desc
+    </select>
+    
+    <insert id="addVersion"  parameterType="JSONObject">
+         insert into ${db_authority}.t_version (versionId , versionNo , publishDate ,userId ,  publisher, type , detail , status , createDate) 
+         values (#{versionId} , #{versionNo}  ,#{publishDate}  , #{userId}, #{publisher} , #{type}  ,#{detail}  ,#{status} , NOW())
+    </insert>
+    
+    <delete id="delVersion"  parameterType="JSONObject">
+        delete from ${db_authority}.t_version
+        where versionId = #{versionId}
+    </delete>
+    
+      
+	<update id="updateVersion"   parameterType="JSONObject">
+	    update ${db_authority}.t_version 
+	    <set>
+			<if test="versionNo != null and versionNo!='' ">
+				versionNo = #{versionNo},
+			</if>
+			 <if test="publishDate != null and publishDate!='' ">
+				publishDate = #{publishDate},
+			</if>
+			<if test="type != null and type != '' ">
+				type =  #{type},
+			</if>
+			<if test="detail != null and detail != '' ">
+				detail =  #{detail},
+			</if>
+			<if test="status != null and status != '' ">
+				status =  #{status},
+			</if>
+		</set>
+		where versionId = #{versionId}
+	</update>
+ 
+ 
+</mapper>

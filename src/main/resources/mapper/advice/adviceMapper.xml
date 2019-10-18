@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.advice.dao.AdviceDao">
+  <update id="addAdvice" parameterType="JSONObject">
+ 	INSERT INTO ${db_advice}.`t_advice_info` (`adviceId`,`adviceTime`,`adviceContent`,`adviceType`,`advicePerson`,`advicePhone`,`schoolId`)
+		 VALUES ( #{adviceId}, now(),#{adviceContent},#{adviceType},#{accountId},#{advicePhone},#{schoolId} );
+  </update>
+    <update id="addAdviceDialogue" parameterType="JSONObject" >
+    INSERT INTO ${db_advice}.`t_advice_dialogue`(`adviceId`,`dialogueId`,`adviceDialogueType`,`accountId`,`schoolId`,`adviceDialogue`,createTime) 
+ 		VALUES(#{adviceId},#{dialogueId},#{adviceDialogueType},#{accountId},#{schoolId},#{adviceDialogue},now());
+  </update>
+  
+ 	<select id="getAdviceInfo" parameterType="JSONObject" resultType="JSONObject">  
+	  SELECT  *
+		 FROM ${db_advice}.`t_advice_info` a 
+		 WHERE a.`adviceId`=#{adviceId} ;
+	 </select>
+	 <select id="getAdviceDialogueInfos" parameterType="JSONObject" resultType="JSONObject">  
+	   SELECT *
+	    FROM ${db_advice}.`t_advice_dialogue` d 
+	   WHERE  d.`adviceId`=#{adviceId} order by d.createTime ;
+	 </select>
+	 
+	 <update id="updateAdviceState" parameterType="JSONObject">
+	 	UPDATE ${db_advice}.`t_advice_info`  SET `adviceState`=#{adviceState} WHERE `adviceId`=#{adviceId}; 
+	 </update>
+	  <update id="updateAdvicePlaceState" parameterType="JSONObject">
+	 	UPDATE ${db_advice}.`t_advice_info`  SET `advicePlateState`=#{advicePlateState} WHERE `adviceId`=#{adviceId}; 
+	 </update>
+	  <update id="updateAdviceIsRead" parameterType="JSONObject">
+	 	UPDATE ${db_advice}.`t_advice_info`  SET `adviceIsRead`=#{adviceIsRead} WHERE `adviceId`=#{adviceId}; 
+	 </update>
+	 <select id="getAdviceList"  parameterType="JSONObject" resultType="JSONObject">  
+		SELECT  * FROM ${db_advice}.`t_advice_info` 
+		WHERE `adviceTime` BETWEEN #{startTime} AND #{endTime}
+		 <if test="adviceType != null and adviceType !=''">
+		 and  `adviceType`=#{adviceType} 
+		 </if>
+		  <if test="adviceState != null and adviceState !=''">
+		 and adviceState =#{adviceState} 
+		 </if>
+		   <if test="advicePlateState != null and advicePlateState !=''">
+		 and advicePlateState =#{advicePlateState} 
+		 </if>
+		 <if test="schoolId != null and schoolId !=''">
+		 and  `schoolId`=#{schoolId}  
+		 </if>
+		  <if test="from == 0">
+		  and advicePerson = #{accountId}
+		  order by adviceState ASC,adviceTime DESC 
+		  </if>
+		   <if test="from == 1">
+		    order by advicePlateState ASC,adviceTime DESC;
+		  </if>
+		
+	 </select>
+	 
+	 <select id="getUnreadAdviceCount"  parameterType="java.lang.Long" resultType="java.lang.Integer">  
+		SELECT count(1) FROM ${db_advice}.`t_advice_info` 
+		WHERE advicePerson=#{accountId}
+		 	  and adviceIsRead=0
+		 	  and advicePlateState=1
+	 </select>
+	 
+	  <select id="getAccountListByIds" parameterType="JSONObject" resultType="JSONObject">  
+	   SELECT a.`id`,a.`name`,a.mobilePhone FROM  ${db_account}${termInfoId}.t_account a 
+	   WHERE a.`id` IN 
+	    <foreach collection="ids" index="index" item="item" open="("   separator="," close=")"> 
+          #{item}
+        </foreach>
+	  </select>
+	    <select id="getSchoolListByIds" parameterType="JSONObject" resultType="JSONObject">  
+	   SELECT s.`id` AS schoolId,s.`name` AS schoolName FROM ${db_account}${termInfoId}.t_school s  
+	   WHERE s.`id`  IN 
+	    <foreach collection="ids" index="index" item="item" open="("   separator="," close=")"> 
+          #{item}
+        </foreach>
+	  </select>
+</mapper>

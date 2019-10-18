@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.resource.dao.ResourceDao">
+    <insert id="createDirectory" parameterType="JSONObject">
+        INSERT INTO ${db_resource}.t_rs_dir
+        	(id,schoolId,creatorId,resType,parentId,name,description,createTime,updateTime)
+        VALUES
+            (#{id},#{schoolId},#{accountId},#{resType},#{parentId},#{name},#{description},#{createTime},#{createTime})
+    </insert>
+    
+	<update id="updateDirectory" parameterType="JSONObject">
+		UPDATE ${db_resource}.t_rs_dir 
+		<set>
+	        <if test="parentId!=null"> 
+	            parentId=#{parentId},
+	        </if>
+			<if test="name!=null">
+				name=#{name},
+			</if>
+			<if test="description!=null">
+				description=#{description},
+			</if>
+			<if test="createTime!=null">
+				updateTime=#{createTime},
+			</if>
+		</set>
+		WHERE id=#{id}
+	</update>
+	
+    <delete id="deleteDirectory" parameterType="JSONObject">
+        DELETE FROM ${db_resource}.t_rs_dir 
+        WHERE id=#{id}
+    </delete>
+ 
+    <select id="getDirectoryList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT id,creatorId,name,description,parentId,resType,updateTime,1 AS type
+        FROM ${db_resource}.t_rs_dir
+        <where>
+	        <if test="id!=null"> 
+	              AND id=#{id}
+	        </if>
+	        <if test="parentId==null"> 
+	              AND parentId IS NULL
+	        </if>
+	        <if test="parentId!=null"> 
+	              AND parentId=#{parentId}
+	        </if>
+	        <if test="schoolId!=null"> 
+	              AND schoolId=#{schoolId}
+	        </if>
+	        <if test="resType!=null and resType!=''"> 
+	              AND resType=#{resType}
+	        </if>
+	        <if test="accountId!=null"> 
+	              AND creatorId=#{accountId}
+	        </if>
+	    </where>
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+    <insert id="createResource" parameterType="JSONObject">
+        INSERT INTO ${db_resource}.t_rs_resource
+       	 	(id,schoolId,creatorId,resType,parentId,name,description,fileId,accessUrl,createTime,updateTime)
+        VALUES
+        	(#{id},#{schoolId},#{accountId},#{resType},#{parentId},#{name},#{description},#{fileId},#{accessUrl},#{createTime},#{createTime})
+    </insert>
+    
+	<update id="updateResource" parameterType="JSONObject">
+		UPDATE ${db_resource}.t_rs_resource 
+		<set>
+	        <if test="parentId!=null"> 
+	            parentId=#{parentId},
+	        </if>
+			<if test="name!=null">
+				name=#{name},
+			</if>
+			<if test="description!=null">
+				description=#{description},
+			</if>
+			<if test="createTime!=null">
+				updateTime=#{createTime},
+			</if>
+		</set>
+		WHERE id=#{id}
+	</update>
+	
+    <delete id="deleteResource" parameterType="JSONObject">
+        DELETE FROM ${db_resource}.t_rs_resource 
+        WHERE id=#{id}
+    </delete>
+ 
+    <select id="getResourceList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT id,creatorId,name,description,accessUrl,parentId,resType,updateTime,2 AS type
+        FROM ${db_resource}.t_rs_resource res
+        <where>
+	        <if test="parentId==null and name==null"> 
+	              AND parentId IS NULL
+	        </if>
+	        <if test="parentId!=null"> 
+	              AND parentId=#{parentId}
+	        </if>
+	        <if test="schoolId!=null"> 
+	              AND schoolId=#{schoolId}
+	        </if>
+	        <if test="resType!=null and resType!=''"> 
+	              AND resType=#{resType}
+	        </if>
+	        <if test="accountId!=null"> 
+	              AND creatorId=#{accountId}
+	        </if>
+	        <if test="name!=null"> 
+	              AND name LIKE #{name}
+	        </if>
+	    </where>
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+</mapper>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <springProperty scope="context" name="LOG_FILE" source="logback.logfile"/>
+    <springProperty scope="context" name="LOG_FILECOUNT" source="logback.logfilecount"/>
+    <springProperty scope="context" name="LOG_FILESIZE" source="logback.logfilesize"/>
+    <springProperty scope="context" name="LOG_ERRFILE" source="logback.logerrfile"/>
+    <springProperty scope="context" name="LOG_PATTERN" source="logback.logpattern"/>
+   
+    <springProperty scope="context" name="LOG_ADDRESS" source="logback.addresslog"/>
+    <springProperty scope="context" name="LOG_BANNER" source="logback.bannerlog"/>
+    <springProperty scope="context" name="LOG_CIRCLE" source="logback.circlelog"/>
+    <springProperty scope="context" name="LOG_CLASSMANAGE" source="logback.classmanagelog"/>
+    <springProperty scope="context" name="LOG_POINT" source="logback.pointlog"/>
+    <springProperty scope="context" name="LOG_WEEKLY" source="logback.weeklylog"/>
+    <springProperty scope="context" name="LOG_ADVICE" source="logback.advicelog"/>
+    
+    <!-- 控制台输出 -->   
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    	<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>  
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder> 
+    </appender>
+    <!-- 按照每天生成日志文件 -->   
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">  
+    	<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}</fileNamePattern> 
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender>   
+    <appender name="ADDRESSFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_ADDRESS}</fileNamePattern> 
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="BANNERFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_BANNER}</fileNamePattern> 
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="CIRCLEFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_CIRCLE}</fileNamePattern> 
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="CLASSMANAGEFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_CLASSMANAGE}</fileNamePattern> 
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="POINTFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_POINT}</fileNamePattern>
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="WEEKLYFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_WEEKLY}</fileNamePattern>
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <appender name="ADVICEFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">   
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_ADVICE}</fileNamePattern>
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    <!-- 按照每天生成日志文件 -->   
+    <appender name="ERRFILE" class="ch.qos.logback.core.rolling.RollingFileAppender"> 
+    	<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>  
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_ERRFILE}</fileNamePattern>
+            <totalSizeCap>${LOG_FILESIZE}</totalSizeCap>
+            <maxHistory>${LOG_FILECOUNT}</maxHistory>
+        </rollingPolicy>   
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+            <pattern>${LOG_PATTERN}</pattern>   
+        </encoder>
+    </appender> 
+    
+    <logger name="com.netflix" level="ERROR"/>
+    <logger name="com.apache.ibatis" level="TRACE"/>
+    <logger name="com.talkweb.basecomp.address" level="DEBUG">
+        <appender-ref ref="ADDRESSFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.banner" level="DEBUG">
+        <appender-ref ref="BANNERFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.circle" level="DEBUG">
+        <appender-ref ref="CIRCLEFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.classm" level="DEBUG">
+        <appender-ref ref="CLASSMANAGEFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.point" level="DEBUG">
+        <appender-ref ref="POINTFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.weekly" level="DEBUG">
+        <appender-ref ref="WEEKLYFILE" />
+    </logger>
+    <logger name="com.talkweb.basecomp.advice" level="DEBUG">
+        <appender-ref ref="ADVICEFILE" />
+    </logger>
+    
+    <!-- 日志输出级别 -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+        <appender-ref ref="ERRFILE" />
+    </root>
+</configuration>

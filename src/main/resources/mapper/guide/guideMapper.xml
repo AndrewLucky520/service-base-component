@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.guide.dao.GuideDao">
+    <select id="getBanMyMenuGuides" parameterType="JSONObject" resultType="JSONObject">
+       SELECT menuId,menuName FROM ${db_guide}.`t_guide_user` WHERE userId=#{userId}  
+        <if test="menuId != null and menuId !=''">
+		 and  `menuId`=#{menuId}  
+		 </if>
+    </select>
+    <update id="addBanMyMenuGuide"  parameterType="JSONObject" >
+     	INSERT INTO  ${db_guide}.`t_guide_user`(`menuId`,`userId`,`menuName`) VALUES(#{menuId},#{userId},#{menuName});
+    </update>
+</mapper>

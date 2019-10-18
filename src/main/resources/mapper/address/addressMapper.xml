@@ -1,0 +1,611 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.address.dao.AddressBookDao">
+
+    <sql id="currentLevel">
+        IF(${termInfoYear}-YEAR(FROM_UNIXTIME(`createTime`))>0,
+        ${termInfoYear}-YEAR(FROM_UNIXTIME(`createTime`))+createLevel,createLevel) AS currentLevel
+    </sql>
+    
+    <sql id="gradeName">
+        ELT(FIELD(currentLevel,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
+        "小小班","小班","中班","大班","一年级","二年级","三年级","四年级","五年级","六年级","初一","初二","初三","高一","高二","高三")
+    </sql>
+    
+    <sql id="gradeTable">
+        (SELECT id,<include refid="currentLevel"/>
+        FROM ${db_account}${termInfo}.t_grade 
+        WHERE status=1 AND schoolId=#{schoolId}) AS grade
+    </sql>
+    
+    <sql id="getLevels">
+        (SELECT id
+        FROM <include refid="gradeTable"/>
+        WHERE currentLevel=#{currentLevel})
+    </sql>
+    
+    <sql id="classKey">
+        id,name,4 AS type,recordcount,CONCAT(name,'(',recordcount,'人',')') AS label
+    </sql>
+    
+    <sql id="classKeyTemp">
+        class.id,class.className AS name,<include refid="studentCount"/>
+    </sql>
+    
+    <sql id="studentCount">
+        (SELECT COUNT(DISTINCT student.stdid) 
+        FROM ${db_account}${termInfo}.t_student student 
+        WHERE class.id=student.classId 
+              AND student.status=1) AS recordcount
+    </sql>
+    
+    <sql id="teacherClassIds">
+        (SELECT class.id 
+        FROM ${db_account}${termInfo}.t_teacher_course course, 
+             ${db_account}${termInfo}.t_class class
+        WHERE course.teacherId=#{userId} 
+              AND course.classId=class.id 
+              AND class.schoolId=#{schoolId}
+              AND class.status=1 
+        UNION ALL
+        SELECT class.id 
+        FROM ${db_account}${termInfo}.t_class class
+        WHERE class.headTeacherId=#{userId} 
+              AND class.schoolId=#{schoolId}
+              AND class.status=1)
+    </sql>
+    
+    <select id="getClass" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT <include refid="classKey"/>,currentLevel,<include refid="gradeName"/> AS gradeName 
+        FROM
+	        (SELECT <include refid="classKeyTemp"/>,currentLevel
+	        FROM ${db_account}${termInfo}.t_class class, 
+	             <include refid="gradeTable"/>
+	        WHERE class.id=#{classId}  
+                  AND class.status=1
+	              AND grade.id=class.gradeId) AS temp
+    </select>
+   
+    <select id="getTeacherClassList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT <include refid="classKey"/>,currentLevel,<include refid="gradeName"/> AS gradeName
+   		FROM
+			(SELECT <include refid="classKeyTemp"/>,currentLevel
+			FROM ${db_account}${termInfo}.t_class class, 
+			     <include refid="gradeTable"/>
+			WHERE grade.id=class.gradeId 
+			      AND class.id in <include refid="teacherClassIds"/>
+                  <if test="currentLevel!=null and currentLevel!=''"> 
+                      AND class.gradeId in <include refid="getLevels"/>
+                  </if>
+			) AS temp
+        WHERE recordcount > 0
+		ORDER BY currentLevel,length(name),name
+    </select>
+    
+    <select id="getClassList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT DISTINCT <include refid="classKey"/>
+        FROM
+			(SELECT <include refid="classKeyTemp"/>
+			FROM ${db_account}${termInfo}.t_class class
+			WHERE schoolId=#{schoolId} 
+			      AND status=1
+		          <if test="currentLevel!=null and currentLevel!=''"> 
+		            AND gradeId in <include refid="getLevels"/>
+		          </if>
+			) AS temp
+        WHERE recordcount > 0
+		ORDER BY length(name),name
+    </select>
+
+    <sql id="gradeKey">
+        currentLevel AS id,CONCAT(<include refid="gradeName"/>,'(',recordcount,'人',')') AS label,recordcount
+    </sql>
+    
+    <select id="getGradeList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT <include refid="gradeKey"/>,7 AS type
+        FROM
+	        (SELECT currentLevel,COUNT(DISTINCT student.stdid) AS recordcount
+	        FROM ${db_account}${termInfo}.t_class class, 
+	             ${db_account}${termInfo}.t_student student,
+	        <include refid="gradeTable"/>
+	        WHERE grade.id=class.gradeId 
+	              AND class.status=1 
+	              AND class.id=student.classId 
+	              AND student.status=1
+	        GROUP BY currentLevel) AS ss
+        ORDER BY currentLevel
+    </select>
+   
+    <select id="getClassLeaderGradeList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT <include refid="gradeKey"/>,3 AS type
+        FROM
+	        (SELECT currentLevel,COUNT(DISTINCT account.id) AS recordcount
+	        FROM ${db_account}${termInfo}.t_class class, 
+	             ${db_account}${termInfo}.t_user user,
+	             ${db_account}${termInfo}.t_account account,
+	        <include refid="gradeTable"/>
+	        WHERE grade.id=class.gradeId 
+	              AND class.status=1 
+	              AND class.headTeacherId=user.id 
+	              AND user.accountId=account.id 
+	              AND account.status=1
+	        GROUP BY currentLevel) AS ss
+        ORDER BY currentLevel
+    </select>
+   
+    <select id="getOrgTypeList" resultType="JSONObject">
+        SELECT id,orgTypeName AS name,1 AS type 
+        FROM ${db_account}${termInfo}.t_orgtype 
+        WHERE status=1
+    </select>
+
+    <sql id="orgTable">
+        (SELECT orginfo.id,orginfo.orgName,orginfo.orgType
+        FROM ${db_account}${termInfo}.t_orginfo orginfo 
+        INNER JOIN ${db_account}${termInfo}.t_school_org sorg ON orginfo.id=sorg.orgId
+        WHERE sorg.schoolId=#{schoolId} 
+              AND orginfo.status=1) AS org
+    </sql>
+    
+    <sql id="orgMemberTable">
+        (SELECT org.orgType,org.id,org.orgName,account.id AS accountId
+        FROM <include refid="orgTable"/>,
+             ${db_account}${termInfo}.t_org_header header,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE header.orgId=org.id 
+              AND header.headerId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+        UNION ALL
+        SELECT org.orgType,org.id,org.orgName,account.id AS accountId
+        FROM <include refid="orgTable"/>,
+             ${db_account}${termInfo}.t_org_member member,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE member.orgId=org.id 
+              AND member.userId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1) AS orgmember
+    </sql>
+    
+    <select id="getOrgList" parameterType="JSONObject" resultType="JSONObject">
+		SELECT id,name,2 AS type,CONCAT(name,'(', recordcount,'人',')') AS label
+	    FROM    
+		    (SELECT id,orgName AS name,COUNT(DISTINCT accountId) AS recordcount
+	        FROM <include refid="orgMemberTable"/>
+	        WHERE orgmember.orgType=#{orgType}
+			GROUP BY id,orgName) AS ss
+    </select>
+
+    <sql id="lessonName">
+        LEFT JOIN 
+        (SELECT course.teacherId,GROUP_CONCAT(DISTINCT lesson.name) AS lessonname
+        FROM ${db_account}${termInfo}.t_teacher_course course,
+             ${db_account}${termInfo}.t_lessoninfo lesson,
+             ${db_account}${termInfo}.t_class class
+        WHERE class.schoolId=#{schoolId} 
+              AND course.classId=class.id 
+              AND course.lessonId=lesson.id 
+        GROUP BY course.teacherId) AS l
+        ON t.userId=l.teacherId
+    </sql>
+    
+    <sql id="memberKey">
+        SELECT DISTINCT t.id,t.name,t.name AS label,t.email,t.type,t.extUserId,t.url,
+               t.firstCode,IF(t.firstCode IS NULL,UPPER(LEFT(t.name, 1)),t.firstCode) AS letter,
+               IF(t.mobilePhone IS NULL,'',t.mobilePhone) AS mobilePhone
+    </sql>
+    
+    <sql id="studentKey">
+        SELECT user.id AS userId,account.id,account.name,account.email,
+       		   account.extId AS extUserId,user.avatar AS url,12 AS type
+    </sql>
+    
+    <sql id="teacherKey">
+        SELECT user.id AS userId,account.id,account.name,account.email,
+        	   account.extId AS extUserId,user.avatar AS url,11 AS type,account.mobilePhone
+    </sql>
+    
+    <sql id="parentKey">
+        SELECT user.id AS userId,account.id,account.email,account.extId AS extUserId,user.avatar AS url,
+        	   13 AS type,account.mobilePhone,parent.prole
+    </sql>
+    
+    <sql id="toLetter">
+        ELT(INTERVAL(CONV(HEX(LEFT(CONVERT(account.name USING gbk),1)),16,10),0xB0A1,0xB0C5,0xB2C1,0xB4EE,0xB6EA,0xB7A2,
+        0xB8C1,0xB9FE,0xBBF7,0xBFA6,0xC0AC,0xC2E8,0xC4C3,0xC5B6,0xC5BE,0xC6DA,0xC8BB,0xC8F6,0xCBFA,0xCDDA,0xCEF4,0xD1B9,0xD4D1),
+        'A','B','C','D','E','F','G','H','J','K','L','M','N','O','P','Q','R','S','T','W','X','Y','Z') AS firstCode
+    </sql>
+   
+    <sql id="orderByLetter">
+        ORDER BY t.firstCode,CONVERT( t.name USING gbk ) ASC
+    </sql>
+   
+    <sql id="orgIds">
+        (SELECT orginfo.id 
+        FROM ${db_account}${termInfo}.t_orginfo orginfo, 
+             ${db_account}${termInfo}.t_school_org sorg
+        WHERE sorg.schoolId=#{schoolId} 
+              AND orginfo.id=sorg.orgId
+              AND orginfo.orgType=#{orgType}
+              AND orginfo.status=1)
+    </sql>
+    
+    <sql id="getLeaderTable">
+        FROM ${db_account}${termInfo}.t_org_header header,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE header.headerId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+              <if test="orgId!=null and orgId!=''"> 
+                AND header.orgId=#{orgId}
+              </if>
+              <if test="orgType!=null and orgType!=''"> 
+                AND header.orgId in <include refid="orgIds"/>
+              </if>
+    </sql>
+    
+    <sql id="getMemberTable">
+        FROM ${db_account}${termInfo}.t_org_member member,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE member.userId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+    </sql>
+    
+    <sql id="getClassLeaderTable">
+        FROM ${db_account}${termInfo}.t_class class, 
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE class.schoolId=#{schoolId}
+              AND class.status=1 
+              AND class.headTeacherId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+    </sql>
+    
+    <sql id="getClassTeacherTable">
+        FROM ${db_account}${termInfo}.t_teacher_course course,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE course.classId=#{classId} 
+              AND course.teacherId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+    </sql>
+    
+    <sql id="getTeacherTable">
+        FROM ${db_account}${termInfo}.t_teacher teacher,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE teacher.schoolId=#{schoolId} 
+              AND teacher.teacherId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+    </sql>
+    
+    <sql id="getStudentTable">
+        FROM ${db_account}${termInfo}.t_student student,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+        WHERE student.stdId=user.id 
+              AND user.accountId=account.id 
+              AND account.status=1
+              AND student.schoolId=#{schoolId}
+    </sql>
+    
+    <sql id="getParentTable">
+        FROM ${db_account}${termInfo}.t_parent parent,
+             ${db_account}${termInfo}.t_user user,
+             ${db_account}${termInfo}.t_account account
+            <if test="studentId==null"> 
+                ,${db_account}${termInfo}.t_student student
+            </if>
+        WHERE parent.parentId=user.id
+              AND user.accountId=account.id 
+              AND account.status=1
+    </sql>
+    
+    <select id="getMemberList" parameterType="JSONObject" resultType="JSONObject">
+        <include refid="memberKey"/>
+        <if test="moudleType==1"> 
+            ,t.userId 
+        </if>
+   		<if test="moudleType==null or moudleType==0 or moudleType==1"> 
+            ,l.lessonname 
+        </if>
+   		FROM 
+			(<include refid="teacherKey"/>,<include refid="toLetter"/>
+			<include refid="getLeaderTable"/> 
+			UNION ALL
+            <include refid="teacherKey"/>,<include refid="toLetter"/> 
+			<include refid="getMemberTable"/>
+            <if test="orgId!=null and orgId!=''"> 
+              AND member.orgId=#{orgId}
+            </if>
+            <if test="orgType!=null and orgType!=''"> 
+              AND member.orgId in <include refid="orgIds"/>
+            </if>
+			) AS t 
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+			<include refid="lessonName"/>
+		</if>
+		<include refid="orderByLetter"/>
+    </select>
+
+    <select id="getLeaderList" parameterType="JSONObject" resultType="JSONObject">
+		<include refid="memberKey"/>
+        <if test="moudleType==1"> 
+            ,t.userId 
+        </if>
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+            ,l.lessonname 
+        </if>
+		FROM 
+			(<include refid="teacherKey"/>,<include refid="toLetter"/>
+			<include refid="getLeaderTable"/>) AS t 
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+			<include refid="lessonName"/>
+        </if>
+		<include refid="orderByLetter"/>
+    </select>
+
+    <select id="getClassLeaderList" parameterType="JSONObject" resultType="JSONObject">
+		<include refid="memberKey"/>
+        <if test="moudleType==1"> 
+            ,t.userId 
+        </if>
+		<if test="moudleType==null or moudleType==0 or moudleType==1"> 
+            ,l.lessonname 
+        </if>
+		FROM 
+			(<include refid="teacherKey"/>,<include refid="toLetter"/>
+			 <include refid="getClassLeaderTable"/>
+             <if test="currentLevel!=null and currentLevel!=''"> 
+                AND class.gradeId in <include refid="getLevels"/>
+             </if>
+			) AS t 
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+			<include refid="lessonName"/>
+		</if>
+		<include refid="orderByLetter"/>
+    </select>
+
+    <sql id="searchUser">
+        <if test="key!=null and key!=''"> 
+            AND (account.name LIKE #{key} or account.mobilePhone LIKE #{key})
+        </if>
+    </sql>
+    
+    <select id="getClassTeacherList" parameterType="JSONObject" resultType="JSONObject">
+		<include refid="memberKey"/>
+        <if test="moudleType==1"> 
+            ,t.userId 
+        </if>
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+            ,l.lessonname 
+        </if>
+		FROM 
+			(<include refid="teacherKey"/>,<include refid="toLetter"/>
+			<include refid="getClassTeacherTable"/>
+			<include refid="searchUser"/>
+			UNION ALL
+			<include refid="teacherKey"/>,<include refid="toLetter"/>
+            <include refid="getClassLeaderTable"/>
+            AND class.id=#{classId} 
+			<include refid="searchUser"/>
+			) AS t 
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+			<include refid="lessonName"/>
+		</if>
+		<include refid="orderByLetter"/>
+    </select>
+    
+    <select id="getTeacherList" parameterType="JSONObject" resultType="JSONObject">
+		<include refid="memberKey"/>
+        <if test="moudleType==1"> 
+            ,t.userId 
+        </if>
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+            ,l.lessonname 
+        </if>
+		FROM 
+			(<include refid="teacherKey"/>,<include refid="toLetter"/>
+			<include refid="getTeacherTable"/>
+			<if test="creatorId!=null and creatorId!=''"> 
+				<include refid="memberIds"/>
+	        </if>
+			<include refid="searchUser"/>
+			) AS t 
+        <if test="moudleType==null or moudleType==0 or moudleType==1"> 
+			<include refid="lessonName"/>
+		</if>
+		<include refid="orderByLetter"/>
+    </select>
+
+    <sql id="mobilePhone">
+        <if test="moudleType!=1"> 
+	        (SELECT account.mobilePhone 
+	        FROM ${db_account}${termInfo}.t_parent parent,
+	             ${db_account}${termInfo}.t_user user,
+	             ${db_account}${termInfo}.t_account account
+	        WHERE parent.studentId=student.stdId 
+	              AND parent.parentId=user.id 
+	              AND user.accountid=account.id 
+	              AND account.status=1
+	        ORDER BY user.createTime LIMIT 1) AS mobilePhone
+        </if>
+        <if test="moudleType==1"> 
+	        (SELECT GROUP_CONCAT(DISTINCT CONCAT(parent.parentId,';',<include refid="getParentRoleName"/>,';',account.mobilePhone))
+	        FROM ${db_account}${termInfo}.t_parent parent,
+	             ${db_account}${termInfo}.t_user user,
+	             ${db_account}${termInfo}.t_account account
+	        WHERE parent.studentId=student.stdId 
+	              AND parent.parentId=user.id 
+	              AND user.accountid=account.id 
+	              AND account.status=1) AS mobilePhone
+        </if>
+    </sql>
+ 
+    <sql id="memberIds">
+        and account.id in (
+            SELECT memberAccId 
+            FROM ${db_addressbook}.t_ab_member
+            WHERE creatorId=#{creatorId}
+        )
+    </sql>
+    
+    <sql id="getStudentCondition">
+        <if test="classId!=null and classId!=''"> 
+            AND student.classId=#{classId}
+        </if>
+        <if test="gradeId!=null and gradeId!=''"> 
+            AND student.gradeId=#{gradeId}
+        </if>
+        <if test="currentLevel!=null and currentLevel!=''"> 
+            AND student.gradeId in <include refid="getLevels"/>
+        </if>
+        <if test="userId!=null and userId!=''"> 
+            AND student.classId in <include refid="teacherClassIds"/>
+        </if>
+        <if test="creatorId!=null and creatorId!=''"> 
+            <include refid="memberIds"/>
+        </if>
+    </sql>
+    <select id="getStudentList" parameterType="JSONObject" resultType="JSONObject">
+        <include refid="memberKey"/>,t.userId
+        FROM  
+	        (<include refid="studentKey"/>,
+            <include refid="mobilePhone"/>,
+	        <include refid="toLetter"/>
+	        <include refid="getStudentTable"/>
+	        <include refid="getStudentCondition"/>
+	        ) AS t
+        <if test="key!=null and key!=''"> 
+            WHERE (t.name LIKE #{key} or t.mobilePhone LIKE #{key})
+        </if>
+        <include refid="orderByLetter"/>
+    </select>
+   
+    <sql id="getParentRoleName">
+        ELT(FIELD(prole,0,1,2,3,4,5,6,7),"家长","爸爸","妈妈","爷爷","奶奶","外公","外婆","家长")
+    </sql>
+    
+    <sql id="getParentName">
+        CONCAT(student.name,<include refid="getParentRoleName"/>) AS name
+    </sql>
+    
+    <select id="getParentListForMessage" parameterType="JSONObject" resultType="JSONObject">
+        SELECT extUserId AS userId,name AS userName,mobilePhone AS phone,13 AS type
+        FROM  
+	        (<include refid="parentKey"/>,account.name
+             FROM ${db_account}${termInfo}.t_parent parent,
+                 ${db_account}${termInfo}.t_user user,
+                 ${db_account}${termInfo}.t_account account
+             WHERE parent.parentId=user.id
+                   AND user.accountId=account.id 
+                   AND account.status=1
+                   AND parent.studentId in 
+             <foreach item="item" collection="studentId" index="index" open="(" close=")" separator=",">
+                #{item}
+             </foreach>
+             ) AS t
+    </select>
+   
+    <select id="getParentList" parameterType="JSONObject" resultType="JSONObject">
+        <include refid="memberKey"/>
+        FROM  
+            (<include refid="parentKey"/>,
+            <include refid="getParentName"/>,
+            <include refid="toLetter"/>
+            FROM ${db_account}${termInfo}.t_parent parent,
+                 ${db_account}${termInfo}.t_user user,
+                 ${db_account}${termInfo}.t_account account,
+                 ${db_account}${termInfo}.t_student student
+            WHERE parent.parentId=user.id
+                  AND user.accountId=account.id 
+                  AND account.status=1
+                  AND student.schoolId=#{schoolId} 
+                  AND parent.studentId=student.stdId
+                  <include refid="getStudentCondition"/>
+            <if test="studentId!=null"> 
+	            AND student.stdId=#{studentId} 
+            </if>
+            ) AS t
+        <if test="key!=null and key!=''"> 
+            WHERE (t.name LIKE #{key} or t.mobilePhone LIKE #{key})
+        </if>
+        <include refid="orderByLetter"/>
+    </select>
+   
+    <insert id="createMyAddressBook" parameterType="JSONObject">
+		INSERT INTO ${db_addressbook}.t_ab_member(id,creatorId,schoolId,memberAccId)
+		VALUES
+			(#{id},#{creatorId},#{schoolId},#{memberAccId});
+    </insert>
+	
+    <select id="findMyAddressBook" parameterType="JSONObject" resultType="JSONObject">
+        SELECT memberAccId
+        FROM ${db_addressbook}.t_ab_member
+		WHERE creatorId=#{creatorId}
+		<if test="memberAccId!=null and memberAccId!=''"> 
+			AND memberAccId=#{memberAccId}
+		</if>
+    </select>
+   
+    <delete id="deleteMyAddressBook" parameterType="JSONObject">
+   		DELETE FROM ${db_addressbook}.t_ab_member 
+   		WHERE creatorId=#{creatorId} 
+   		      AND memberAccId=#{memberAccId}
+    </delete>
+ 
+    <select id="getMemberCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT accountId) AS recordcount 
+        FROM <include refid="orgMemberTable"/>
+        WHERE orgmember.orgType=#{orgType}
+    </select>
+   
+    <select id="getLeaderCount" parameterType="JSONObject" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT account.id) AS recordcount 
+		<include refid="getLeaderTable"/> 
+    </select>
+
+    <select id="getClassLeaderCount" parameterType="JSONObject" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT account.id) AS recordcount 
+		<include refid="getClassLeaderTable"/>
+    </select>
+   
+    <select id="getClassTeacherCount" parameterType="JSONObject" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT t.id) AS recordcount 
+        FROM 
+	        (SELECT account.id
+	        <include refid="getClassTeacherTable"/>
+	        UNION ALL
+	        SELECT account.id
+	        <include refid="getClassLeaderTable"/>
+            AND class.id=#{classId} 
+	        ) AS t
+    </select>
+   
+    <select id="getTeacherCount" parameterType="JSONObject" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT account.id) AS recordcount 
+		<include refid="getTeacherTable"/>
+    </select>
+   
+    <select id="getStudentCount" parameterType="JSONObject" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT account.id) AS recordcount
+		<include refid="getStudentTable"/>
+    </select>
+  
+    <select id="getMessageAdmin" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT id) AS recordcount
+        FROM ${db_account}${termInfo}.t_user_permissionspc
+        WHERE permissionid=20063 and userid=#{userId}
+    </select>
+  
+</mapper>

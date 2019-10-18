@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.circle.dao.ClassCircleDao">
+    <insert id="createCircle" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_circle
+        (id,schoolId,creatorId,creatorName,creatorType,content,createTime)
+        VALUES
+            (#{circleId},#{schoolId},#{accountId},#{accountName},#{creatorType},#{content},#{createTime})
+    </insert>
+    
+    <insert id="createTempCircle" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_circle
+        (id,schoolId,creatorId,creatorName,creatorType,content,createTime,flag)
+        VALUES
+            (#{circleId},#{schoolId},#{creatorId},#{creatorName},
+            #{creatorType},#{content},#{createTime},#{flag})
+    </insert>
+    
+    <insert id="createCircleClass" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_circle_class
+        (id,circleId,schoolId,classId,createTime)
+        VALUES
+        (#{id},#{circleId},#{schoolId},#{classId},#{createTime})
+    </insert>
+    
+    <insert id="createCircleImage" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_image
+        (id,circleId,schoolId,fileId,imgIndex,accessUrl)
+        VALUES
+        <foreach item="item" collection="imageList" separator=",">
+            (#{item.id}, #{circleId}, #{schoolId}, #{item.fileId}, #{item.imgIndex}, #{item.accessUrl})
+        </foreach>
+    </insert>
+    
+    <insert id="createTempCircleImage" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_imagetemp
+        (id,circleId,schoolId,imgIndex,accessUrl)
+        VALUES
+        (#{id},#{circleId},#{schoolId},#{imgIndex},#{accessUrl})
+    </insert>
+    
+    <insert id="createCircleLike" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_like
+        (id,circleId,schoolId,accountId,accountName,createTime)
+        VALUES
+        (#{id},#{circleId},#{schoolId},#{accountId},#{accountName},#{createTime})
+    </insert>
+    
+    <insert id="createCircleComment" parameterType="JSONObject">
+        INSERT INTO ${db_classcircle}.t_cc_comment
+        (id,circleId,schoolId,accountId,accountName,parentId,parentName,content,createTime)
+        VALUES
+        (#{commentId},#{circleId},#{schoolId},#{accountId},#{accountName},
+        #{parentId},#{parentName},#{content},#{createTime})
+    </insert>
+    
+    <delete id="deleteCircle" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_circle 
+        WHERE id=#{circleId}
+    </delete>
+ 
+    <delete id="deleteCircleClass" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_circle_class 
+        WHERE circleId=#{circleId}
+    </delete>
+ 
+    <delete id="deleteCircleImageList" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_image 
+        WHERE circleId=#{circleId}
+    </delete>
+ 
+    <delete id="deleteCircleLikeList" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_like 
+        WHERE circleId=#{circleId}
+    </delete>
+ 
+    <delete id="deleteCircleCommentList" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_comment 
+        WHERE circleId=#{circleId}
+    </delete>
+ 
+    <delete id="deleteCircleLike" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_like 
+        WHERE circleId=#{circleId} AND accountId=#{accountId}
+    </delete>
+ 
+    <delete id="deleteCircleComment" parameterType="JSONObject">
+        DELETE FROM ${db_classcircle}.t_cc_comment 
+        WHERE id in 
+        <foreach item="item" collection="commentIds" index="index" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </delete>
+ 
+    <select id="getCircleLikeCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT count(id) AS recordCount
+        FROM ${db_classcircle}.t_cc_like
+        WHERE circleId=#{circleId}
+        <if test="accountId!=null and accountId!=''"> 
+            AND accountId=#{accountId}
+        </if>
+    </select>
+  
+    <select id="getCircleCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT count(circle.id) AS recordCount
+        FROM ${db_classcircle}.t_cc_circle circle,
+             ${db_classcircle}.t_cc_circle_class class
+        WHERE circle.id=class.circleId
+        <if test="classId!=null and classId!=''"> 
+              AND class.classId=#{classId}
+        </if>
+        <if test="userId!=null and userId!=''"> 
+              AND class.classId in <include refid="userClassIds"/>
+        </if>
+    </select>
+  
+    <select id="getCircleList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT circle.flag,circle.id AS circleId,circle.schoolId,circle.creatorId,class.classId,
+               circle.creatorName,circle.creatorType,circle.content,circle.createTime,
+               (SELECT extId FROM ${db_account}${termInfo}.t_account account WHERE account.id=circle.creatorId) as extUserId,
+               IF(circle.creatorId=#{accountId},1,0) AS deletable,
+               (SELECT IF(count(lk.id)=0,0,1) 
+               FROM ${db_classcircle}.t_cc_like lk
+               WHERE lk.circleId=circle.id 
+                     AND lk.accountId=#{accountId}) AS isZan
+        FROM ${db_classcircle}.t_cc_circle circle,
+             ${db_classcircle}.t_cc_circle_class class
+        WHERE circle.id=class.circleId
+        <if test="classId!=null and classId!=''"> 
+              AND class.classId=#{classId}
+        </if>
+        <if test="userId!=null and userId!=''"> 
+              AND class.classId in <include refid="userClassIds"/>
+        </if>
+        ORDER BY circle.createTime desc
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+    <select id="getCircleCreator" parameterType="JSONObject" resultType="java.lang.Long">
+        SELECT circle.creatorId
+        FROM ${db_classcircle}.t_cc_circle circle
+        WHERE circle.id=#{circleId}
+    </select>
+  
+    <sql id="userClassIds">
+        (SELECT DISTINCT id 
+        FROM 
+	        (SELECT class.id 
+	        FROM ${db_account}${termInfo}.t_teacher_course course, 
+	             ${db_account}${termInfo}.t_class class
+	        WHERE course.teacherId=#{userId} 
+	              AND course.classId=class.id 
+	              AND class.schoolId=#{schoolId}
+	              AND class.status=1 
+	        UNION ALL
+	        SELECT class.id 
+	        FROM ${db_account}${termInfo}.t_class class
+	        WHERE class.headTeacherId=#{userId} 
+	              AND class.schoolId=#{schoolId}
+	              AND class.status=1
+	        UNION ALL
+	        SELECT student.classId
+	        FROM ${db_account}${termInfo}.t_student student
+	        WHERE student.stdId=#{userId} 
+	              AND student.schoolId=#{schoolId}
+	              AND student.status=1
+	        UNION ALL
+	        SELECT student.classId
+	        FROM ${db_account}${termInfo}.t_student student,
+	             ${db_account}${termInfo}.t_parent parent
+	        WHERE student.stdId=parent.studentId
+	              AND parent.parentId=#{userId} 
+	              AND student.schoolId=#{schoolId}
+	              AND student.status=1) AS SS)
+    </sql>
+    
+    <select id="getCircleImageList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT imgIndex,accessUrl
+        FROM ${db_classcircle}.t_cc_image
+        WHERE circleId=#{circleId}
+        ORDER BY imgIndex
+    </select>
+  
+    <select id="getTempCircleImageList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT imgIndex,accessUrl
+        FROM ${db_classcircle}.t_cc_imagetemp
+        WHERE circleId=#{circleId}
+        ORDER BY imgIndex
+    </select>
+  
+    <select id="getCircleLikeList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT accountId,accountName
+        FROM ${db_classcircle}.t_cc_like
+        WHERE circleId=#{circleId} 
+        ORDER BY createTime
+    </select>
+  
+    <select id="getCircleCommentList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT id AS commentId,accountId,accountName,
+               IF(accountId=#{accountId},1,0) AS deletable,
+               content,parentId,parentName,
+               IF(parentId is NULL,FALSE,TRUE) AS objType
+        FROM ${db_classcircle}.t_cc_comment
+        WHERE circleId=#{circleId}
+        ORDER BY createTime
+    </select>
+  
+    <select id="getSubCircleCommentList" parameterType="java.lang.String" resultType="java.lang.String">
+        SELECT id AS commentId
+        FROM ${db_classcircle}.t_cc_comment
+        WHERE parentId=#{commentId}
+    </select>
+</mapper>

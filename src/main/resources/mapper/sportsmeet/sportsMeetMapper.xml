@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper  
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.talkweb.basecomp.sportsmeet.dao.SportsMeetDao">
+    <insert id="createSports" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_sports
+        	(schoolId,termInfo,sportsId,creatorId,sportsName,startTime,endTime,createTime)
+        VALUES
+            (#{schoolId},#{termInfo},#{sportsId},#{accountId},#{sportsName},#{startTime},#{endTime},#{createTime})
+    </insert>
+    
+	<update id="updateSports" parameterType="JSONObject">
+		UPDATE ${db_sportsmeet}.t_ss_sports 
+		<set>
+			<if test="startTime!=null and startTime!=''">
+				startTime=#{startTime},
+			</if>
+			<if test="endTime!=null and endTime!=''">
+				endTime=#{endTime},
+			</if>
+			<if test="sportsName!=null">
+				sportsName=#{sportsName},
+			</if>
+		</set>
+		WHERE sportsId=#{sportsId}
+	</update>
+	
+    <delete id="deleteSports" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_sports 
+        WHERE sportsId=#{sportsId}
+    </delete>
+ 
+    <select id="getSportsList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT sportsId,sportsName,
+        	   DATE_FORMAT(startTime,'%Y-%m-%d %H:%i:%s') AS startTime,
+        	   DATE_FORMAT(endTime,'%Y-%m-%d %H:%i:%s') AS endTime,
+        	   (SELECT GROUP_CONCAT(gradeId) 
+				FROM ${db_sportsmeet}.t_ss_sportsgrade
+				WHERE sportsId=sp.sportsId) AS gradeIds
+        FROM ${db_sportsmeet}.t_ss_sports sp
+        <where>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND schoolId=#{schoolId}
+	        </if>
+	        <if test="name!=null and name!=''"> 
+	        	AND sportsName LIKE #{name}
+	        </if>
+	    </where>
+        ORDER BY createTime DESC
+    </select>
+  
+    <insert id="createEvents" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_events
+        	(eventsId,schoolId,creatorId,eventsName,type,createTime)
+        VALUES
+            (#{eventsId},#{schoolId},#{accountId},#{eventsName},#{type},#{createTime})
+    </insert>
+    
+    <insert id="createEventsBatch" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_events
+        	(eventsId,schoolId,creatorId,eventsName,type,createTime)
+        VALUES
+         	<foreach collection="eventsList" item="item" index="index" separator=",">
+            (#{item.eventsId},#{schoolId},#{accountId},#{item.eventsName},#{item.type},#{createTime})
+            </foreach>
+    </insert>
+    
+	<update id="updateEvents" parameterType="JSONObject">
+		UPDATE ${db_sportsmeet}.t_ss_events 
+		<set>
+			<if test="eventsName!=null">
+				eventsName=#{eventsName},
+			</if>
+	        <if test="type!=null and type!=''"> 
+	        	type=#{type}
+	        </if>
+		</set>
+		WHERE eventsId=#{eventsId}
+	</update>
+	
+    <delete id="deleteEvents" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_events 
+        WHERE eventsId=#{eventsId}
+    </delete>
+ 
+    <select id="getEventsList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT eventsId,eventsName,type
+        FROM ${db_sportsmeet}.t_ss_events
+        <where>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND eventsId=#{eventsId}
+	        </if>
+	        <if test="type!=null and type!=''"> 
+	        	AND type=#{type}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND schoolId=#{schoolId}
+	        </if>
+			<if test="eventsName!=null and eventsName!=''">
+				AND eventsName=#{eventsName}
+			</if>
+	    </where>
+        ORDER BY createTime DESC
+    </select>
+  
+    <insert id="createSportsGrade" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_sportsgrade
+        	(schoolId,sportsId,gradeId)
+        VALUES
+	        <foreach collection="gradeIds" item="item" index="index" separator=",">
+            	(#{schoolId},#{sportsId},#{item})
+            </foreach>
+    </insert>
+    
+    <delete id="deleteSportsGrade" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_sportsgrade 
+        WHERE sportsId=#{sportsId}
+    </delete>
+ 
+    <select id="getSportsGradeList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT gradeId
+        FROM ${db_sportsmeet}.t_ss_sportsgrade
+        <where>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND schoolId=#{schoolId}
+	        </if>
+	    </where>
+    </select>
+  
+    <update id="createSchedule" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_schedule
+        	(schoolId,sportsId,eventsId,startTime)
+        VALUES
+            (#{schoolId},#{sportsId},#{eventsId},#{startTime})
+		ON DUPLICATE KEY UPDATE startTime=VALUES(startTime)
+    </update>
+    
+    <delete id="deleteSchedule" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_schedule 
+        <where>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND eventsId=#{eventsId}
+	        </if>
+	    </where>
+    </delete>
+ 
+    <select id="getScheduleList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT sch.sportsId,sch.eventsId,eve.eventsName,eve.type,
+        	   DATE_FORMAT(sch.startTime,'%Y-%m-%d %H:%i:%s') AS startTime
+        FROM ${db_sportsmeet}.t_ss_schedule sch
+        	 LEFT JOIN ${db_sportsmeet}.t_ss_events eve
+        	 ON sch.eventsId=eve.eventsId
+        <where>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND sch.eventsId=#{eventsId}
+	        </if>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sch.sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND sch.schoolId=#{schoolId}
+	        </if>
+	        <if test="type!=null and type!=''"> 
+	        	AND eve.type=#{type}
+	        </if>
+	    </where>
+        ORDER BY sch.createTime DESC
+    </select>
+  
+    <insert id="createMember" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_member
+        	(schoolId,sportsId,eventsId,studentId,createTime)
+        VALUES
+	        <foreach collection="studentList" item="item" index="index" separator=",">
+            	(#{schoolId},#{sportsId},#{item.eventsId},#{item.studentId},#{createTime})
+            </foreach>
+    </insert>
+    
+    <delete id="deleteMember" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_member 
+        <where>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND eventsId=#{eventsId}
+	        </if>
+			<if test="studentId!=null">
+			 	AND studentId=#{studentId}
+			</if>
+			<if test="studentIds!=null">
+			 	AND studentId IN
+			  	<foreach collection="studentIds" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+			  	</foreach>
+			</if>
+		</where>
+    </delete>
+ 
+    <select id="getMemberCount" parameterType="JSONObject" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM ${db_sportsmeet}.t_ss_member mem
+        <where>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND mem.eventsId=#{eventsId}
+	        </if>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND mem.sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND mem.schoolId=#{schoolId}
+	        </if>
+			<if test="studentIds!=null">
+			 	AND mem.studentId IN
+			  	<foreach collection="studentIds" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+			  	</foreach>
+			</if>
+	    </where>
+    </select>
+  
+    <select id="getMemberList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT mem.sportsId,mem.eventsId,mem.studentId,eve.eventsName
+        FROM ${db_sportsmeet}.t_ss_member mem
+        	 LEFT JOIN ${db_sportsmeet}.t_ss_events eve
+        	 ON mem.eventsId=eve.eventsId
+        <where>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND mem.eventsId=#{eventsId}
+	        </if>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND mem.sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND mem.schoolId=#{schoolId}
+	        </if>
+			<if test="studentIds!=null">
+			 	AND mem.studentId IN
+			  	<foreach collection="studentIds" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+			  	</foreach>
+			</if>
+	    </where>
+        <if test="pageNo!=null and pageNo>0"> 
+            LIMIT ${(pageNo-1)*pageSize},${pageSize}
+        </if>
+    </select>
+  
+    <update id="createRecord" parameterType="JSONObject">
+        INSERT INTO ${db_sportsmeet}.t_ss_record
+        	(schoolId,sportsId,eventsId,studentId,record,createTime)
+        VALUES
+	        <foreach collection="recordList" item="item" index="index" separator=",">
+            	(#{schoolId},#{sportsId},#{item.eventsId},#{item.studentId},#{item.record},#{createTime})
+            </foreach>
+		ON DUPLICATE KEY UPDATE record=VALUES(record)
+    </update>
+    
+    <delete id="deleteRecord" parameterType="JSONObject">
+        DELETE FROM ${db_sportsmeet}.t_ss_record 
+        <where>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND eventsId=#{eventsId}
+	        </if>
+	    </where>
+    </delete>
+ 
+    <select id="getRecordList" parameterType="JSONObject" resultType="JSONObject">
+        SELECT CONCAT(eventsId,studentId) AS id,record
+        FROM ${db_sportsmeet}.t_ss_record
+        <where>
+	        <if test="eventsId!=null and eventsId!=''"> 
+	        	AND eventsId=#{eventsId}
+	        </if>
+	        <if test="sportsId!=null and sportsId!=''"> 
+	        	AND sportsId=#{sportsId}
+	        </if>
+	        <if test="schoolId!=null and schoolId!=''"> 
+	        	AND schoolId=#{schoolId}
+	        </if>
+			<if test="studentIds!=null">
+			 	AND studentId IN
+			  	<foreach collection="studentIds" index="index" item="item" open="(" separator="," close=")">
+					#{item}
+			  	</foreach>
+			</if>
+	    </where>
+    </select>
+  
+</mapper>
